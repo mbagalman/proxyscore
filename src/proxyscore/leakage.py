@@ -28,6 +28,7 @@ from ._utils import (
     aligned_series,
     as_indicator_frame,
     auc_score,
+    check_outcome_type,
     check_unique_index,
     is_binary,
     spearman,
@@ -47,13 +48,16 @@ def leakage_scan(
     Returns a DataFrame with each indicator's association with the outcome
     (oriented AUC for binary outcomes, |spearman| otherwise), the number of
     overlapping rows it was computed on, whether the statistical check was
-    assessable at all (``assessed``), whether its name matches a
-    leak-suggestive pattern, and the statistical flag.
+    assessable (``assessed``: enough overlap AND a computable, finite
+    association - e.g. both outcome classes present in the overlap),
+    whether its name matches a leak-suggestive pattern, and the
+    statistical flag.
     """
     t = thresholds or Thresholds()
     X = as_indicator_frame(indicators)
     check_unique_index(X.index, "indicators")
     y = aligned_series(outcome, "outcome", X.index)
+    check_outcome_type(y)
     binary = is_binary(y)
     y01 = to_binary(y) if binary else y
 
@@ -61,18 +65,19 @@ def leakage_scan(
     for c in X.columns:
         df = pd.concat([X[c], y01], axis=1).dropna()
         n_overlap = int(len(df))
-        assessed = n_overlap >= t.min_leak_rows
         assoc = np.nan
-        stat_flag = False
-        if assessed:
+        # association needs variation on both sides of the overlap (a tied-rank
+        # AUC of 0.5 from a constant indicator is degenerate, not evidence)
+        if n_overlap >= t.min_leak_rows and df[c].nunique() >= 2 and df.iloc[:, 1].nunique() >= 2:
             if binary:
                 auc = auc_score(df[c].to_numpy(), df.iloc[:, 1].to_numpy())
                 assoc = max(auc, 1 - auc) if not np.isnan(auc) else np.nan
-                stat_flag = not np.isnan(assoc) and assoc >= t.leak_auc
             else:
                 rho = spearman(df[c], df.iloc[:, 1])
                 assoc = abs(rho) if not np.isnan(rho) else np.nan
-                stat_flag = not np.isnan(assoc) and assoc >= t.leak_corr
+        assessed = bool(np.isfinite(assoc))
+        threshold = t.leak_auc if binary else t.leak_corr
+        stat_flag = assessed and assoc >= threshold
         name_l = str(c).lower()
         name_flag = any(p in name_l for p in t.leak_name_patterns)
         rows.append(
@@ -96,6 +101,14 @@ def check_leakage(
 ) -> CheckResult:
     """Flag indicators that look like they encode the outcome."""
     t = thresholds or Thresholds()
+    y = outcome if isinstance(outcome, pd.Series) else pd.Series(np.asarray(outcome))
+    if y.dropna().nunique() < 2:
+        return CheckResult(
+            "leakage",
+            Status.SKIP,
+            "Outcome has no variation - association with it is undefined, so leakage "
+            "could not be assessed.",
+        )
     table = leakage_scan(indicators, outcome, t)
 
     unassessed = table[~table["assessed"]]
@@ -103,8 +116,9 @@ def check_leakage(
         return CheckResult(
             "leakage",
             Status.SKIP,
-            f"No indicator had at least {t.min_leak_rows} rows overlapping the outcome - "
-            f"statistical leakage could not be assessed at all.",
+            f"No indicator had a computable association with the outcome (at least "
+            f"{t.min_leak_rows} overlapping rows with variation in both indicator and "
+            f"outcome) - statistical leakage could not be assessed at all.",
             {"n_statistical_flags": 0, "n_unassessed": int(len(table))},
             table.reset_index(),
         )
@@ -131,7 +145,8 @@ def check_leakage(
         statuses.append(Status.WARN)
         problems.append(
             f"statistical leakage could not be assessed for {list(unassessed.index)} "
-            f"(fewer than {t.min_leak_rows} rows overlapping the outcome)"
+            f"(too few overlapping rows, or no computable association - e.g. only one "
+            f"outcome class where the indicator is populated)"
         )
 
     status = worst(statuses)

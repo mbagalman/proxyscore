@@ -25,7 +25,9 @@ from ._utils import (
     aligned_series,
     as_series,
     auc_score,
+    check_outcome_type,
     check_unique_index,
+    ensure_finite,
     fmt,
     is_binary,
     spearman,
@@ -44,10 +46,14 @@ def segment_summary(score, segments, outcome=None) -> pd.DataFrame:
     """
     s = as_series(score, "score")
     check_unique_index(s.index, "score")
+    ensure_finite(s, "score")
     g = aligned_series(segments, "segment", s.index)
     parts = [s, g]
     if outcome is not None:
-        parts.append(aligned_series(outcome, "outcome", s.index))
+        y = aligned_series(outcome, "outcome", s.index)
+        check_outcome_type(y)
+        ensure_finite(y, "outcome")
+        parts.append(y)
     df = pd.concat(parts, axis=1).dropna(subset=["score", "segment"])
 
     binary = "outcome" in df and is_binary(df["outcome"])

@@ -71,6 +71,35 @@ def as_series(values, name: str) -> pd.Series:
     return pd.Series(np.asarray(values), name=name)
 
 
+def ensure_finite(s: pd.Series, what: str) -> None:
+    """Raise when a numeric Series contains infinite values (NaN is allowed)."""
+    if not pd.api.types.is_numeric_dtype(s):
+        return
+    n_inf = int(np.isinf(s.to_numpy(dtype="float64", na_value=np.nan)).sum())
+    if n_inf:
+        raise ValueError(
+            f"{what} contains {n_inf} infinite value(s); replace them with NaN or "
+            f"finite values first."
+        )
+
+
+def check_outcome_type(outcome: pd.Series) -> None:
+    """Reject outcomes no check can handle, with one consistent error.
+
+    Accepted: numeric outcomes (continuous or binary) and two-valued
+    outcomes of any type (strings, booleans, categories).
+    """
+    y = outcome.dropna()
+    if pd.api.types.is_numeric_dtype(y):
+        return
+    if y.nunique() == 2:
+        return
+    raise TypeError(
+        f"outcome must be numeric or two-valued; got a non-numeric outcome with "
+        f"{y.nunique()} distinct values"
+    )
+
+
 def is_binary(outcome: pd.Series) -> bool:
     """True when the outcome has exactly two distinct non-null values."""
     return outcome.dropna().nunique() == 2

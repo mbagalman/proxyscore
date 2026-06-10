@@ -7,7 +7,7 @@ from enum import Enum
 
 import pandas as pd
 
-from ._utils import aligned_series, as_indicator_frame, check_unique_index
+from ._utils import aligned_series, as_indicator_frame, check_unique_index, ensure_finite
 from .bias import check_segments
 from .config import Thresholds
 from .construct import CompositeScore
@@ -156,6 +156,7 @@ class ProxyAudit:
             self.score = CompositeScore().fit_transform(self.indicators)
         else:
             self.score = aligned_series(score, "proxy_score", idx)
+            ensure_finite(self.score, "score")
         self.outcome = aligned_series(outcome, "outcome", idx) if outcome is not None else None
         self.segments = aligned_series(segments, "segment", idx) if segments is not None else None
         self.period = aligned_series(period, "period", idx) if period is not None else None
@@ -218,6 +219,21 @@ class ProxyAudit:
         by_name = {r.name: r for r in results}
         fails = [r.name for r in results if r.status is Status.FAIL]
         warns = [r.name for r in results if r.status is Status.WARN]
+        # A SKIP on a check whose input was never supplied means "not
+        # applicable". A SKIP despite a supplied input means evidence was
+        # missing inside the claimed validation scope - that must not be
+        # hidden behind a decision-grade verdict.
+        supplied = {
+            "stability": self.period is not None,
+            "downstream": self.outcome is not None,
+            "leakage": self.outcome is not None,
+            "segments": self.segments is not None,
+        }
+        unassessable = [
+            r.name
+            for r in results
+            if r.status is Status.SKIP and supplied.get(r.name, False) and r.name != "downstream"
+        ]
 
         if fails:
             return (
@@ -232,17 +248,25 @@ class ProxyAudit:
                 "overlapping data). Without it the score is an untested hypothesis - "
                 "collect a delayed hard outcome and re-audit.",
             )
-        if downstream.status is Status.PASS and not warns:
-            return (
-                Verdict.DECISION_GRADE,
-                "strong downstream signal and every applicable check passed. Suitable "
-                "for per-record decisions within the validated population and horizon.",
-            )
         if downstream.status is Status.PASS:
+            issues = []
+            if warns:
+                issues.append(f"warnings ({', '.join(warns)})")
+            if unassessable:
+                issues.append(
+                    f"checks that could not be assessed despite supplied inputs "
+                    f"({', '.join(unassessable)})"
+                )
+            if not issues:
+                return (
+                    Verdict.DECISION_GRADE,
+                    "strong downstream signal and every applicable check passed. Suitable "
+                    "for per-record decisions within the validated population and horizon.",
+                )
             return (
                 Verdict.DIRECTIONAL,
-                f"strong downstream signal, but with warnings ({', '.join(warns)}). "
-                f"Suitable for dashboards and prioritization; resolve the warnings "
+                f"strong downstream signal, but with {' and '.join(issues)}. "
+                f"Suitable for dashboards and prioritization; resolve these "
                 f"before automating decisions on it.",
             )
         return (

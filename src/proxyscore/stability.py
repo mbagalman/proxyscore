@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ._utils import aligned_series, as_series, check_unique_index, fmt
+from ._utils import aligned_series, as_series, check_unique_index, ensure_finite, fmt
 from .config import Thresholds
 from .results import CheckResult, Status
 
@@ -21,6 +21,11 @@ def psi(expected, actual, bins: int = 10) -> float:
         raise ValueError(f"bins must be >= 2, got {bins}")
     expected = np.asarray(pd.Series(expected).dropna(), dtype=float)
     actual = np.asarray(pd.Series(actual).dropna(), dtype=float)
+    if np.isinf(expected).any() or np.isinf(actual).any():
+        raise ValueError(
+            "psi inputs contain infinite values; replace them with NaN or finite "
+            "values first."
+        )
     if len(expected) == 0 or len(actual) == 0:
         return float("nan")
     edges = np.unique(np.quantile(expected, np.linspace(0, 1, bins + 1)))
@@ -39,6 +44,7 @@ def psi(expected, actual, bins: int = 10) -> float:
 def _score_period_frame(score, period) -> pd.DataFrame:
     s = as_series(score, "score")
     check_unique_index(s.index, "score")
+    ensure_finite(s, "score")
     p = aligned_series(period, "period", s.index)
     return pd.concat([s, p], axis=1).dropna()
 
@@ -93,6 +99,8 @@ def check_stability(
             "Fewer than two periods available - stability not assessed.",
         )
     base = baseline_period if baseline_period is not None else periods[0]
+    if base not in periods:
+        raise ValueError(f"baseline_period {base!r} not found in period values")
     base_n = int((df["period"] == base).sum())
     if base_n < t.min_period_rows:
         return CheckResult(

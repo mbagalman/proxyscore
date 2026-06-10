@@ -19,7 +19,9 @@ from ._utils import (
     aligned_series,
     as_series,
     auc_score,
+    check_outcome_type,
     check_unique_index,
+    ensure_finite,
     fmt,
     is_binary,
     spearman,
@@ -30,10 +32,13 @@ from .results import CheckResult, Status
 
 
 def _paired(score, outcome) -> pd.DataFrame:
-    """Align score and outcome into one DataFrame, dropping incomplete rows."""
+    """Align and validate score and outcome, dropping incomplete rows."""
     s = as_series(score, "score")
     check_unique_index(s.index, "score")
+    ensure_finite(s, "score")
     y = aligned_series(outcome, "outcome", s.index)
+    check_outcome_type(y)
+    ensure_finite(y, "outcome")
     return pd.concat([s, y], axis=1).dropna()
 
 
@@ -121,6 +126,8 @@ def check_downstream(
     n_bands: int = 10,
 ) -> CheckResult:
     """Judge whether the score carries decision-grade signal about the outcome."""
+    if not isinstance(n_bands, int) or n_bands < 2:
+        raise ValueError(f"n_bands must be an integer >= 2, got {n_bands!r}")
     t = thresholds or Thresholds()
     df = _paired(score, outcome)
     if len(df) < 30:
@@ -139,12 +146,9 @@ def check_downstream(
             f"unstable to support a verdict.",
             m,
         )
-    details = None
-    try:
-        bands = min(n_bands, max(2, len(df) // 30))
-        details = lift_table(df["score"], df["outcome"], n_bands=bands)
-    except ValueError:
-        pass
+    # len(df) >= 30 here, so bands is always within [2, len(df)]
+    bands = min(n_bands, max(2, len(df) // 30))
+    details = lift_table(df["score"], df["outcome"], n_bands=bands)
 
     notes = [
         "Validation is only meaningful if the outcome was observed AFTER the score "

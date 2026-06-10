@@ -26,3 +26,12 @@ Hardening (post-review, pre-publication):
 - `Thresholds.__post_init__` validates ranges and ordering; `bins`/`n_bands` must be >= 2.
 - PSI grading guards against undersized periods (`min_period_rows`, default 50): undersized baselines skip the check, undersized comparison periods are excluded and listed.
 - Infinite values are rejected at the indicator boundary with the offending columns named.
+
+Hardening, round 2:
+
+- The verdict now distinguishes "not applicable" from "supplied but unassessable": a check that SKIPs despite its input being provided (underpowered stability baseline, unassessable leakage, too-small segments) caps the verdict at `directional` and is named in the verdict reason.
+- Leakage assessability now requires a computable, finite association - enough overlapping rows AND variation on both sides (e.g. both outcome classes present where the indicator is populated). A constant outcome SKIPs the whole check.
+- `check_stability` raises on an unknown `baseline_period` instead of reporting it as underpowered.
+- `check_downstream` validates `n_bands` at its boundary and no longer swallows `ValueError`s from lift-table construction.
+- One consistent `TypeError` for non-numeric outcomes with more than two values across downstream, segment, and leakage checks.
+- Infinite values are rejected in scores and numeric outcomes everywhere (`psi`, stability, downstream, segments, `ProxyAudit`), not just in indicator frames.
