@@ -25,10 +25,15 @@ answer to the question that follows: **is this score real, or are we just compou
 
 The audit ends in a verdict:
 
-- **`decision_grade`** — strong validated signal, no failures: usable for per-record decisions
-  (prioritization, alerting, automation) within the validated scope.
-- **`directional`** — real but moderate signal, or unresolved warnings: usable for dashboards
-  and trend reading, not for automated per-record action.
+- **`decision_grade`** — strong downstream signal, no failures or warnings, and every supplied
+  check assessable: a strong *candidate* for per-record decisions (prioritization, alerting,
+  automation) within the validated scope. It confirms association strength and the absence of
+  problems among the checks you supplied — it does not by itself establish calibration,
+  operating-threshold performance, prospective validation, or governance clearance, so treat it
+  as "cleared to evaluate for automation," not an automatic green light.
+- **`directional`** — real but moderate signal, or unresolved warnings, or a supplied check that
+  couldn't be assessed: usable for dashboards and trend reading, not for automated per-record
+  action.
 - **`not_validated`** — a failed check or no outcome validation: the score is an untested
   hypothesis, not a measurement.
 

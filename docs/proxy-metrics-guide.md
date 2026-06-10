@@ -166,10 +166,15 @@ If you believe one dominant dimension runs through your standardized indicators,
 principal component gives you data-driven weights instead of hand-set ones. This sits between
 formative and reflective: it assumes shared variance worth extracting.
 
-> 🔧 **In proxyscore:** `PCAScore` fits the first principal component, aligns its sign so "higher
-> = more construct," and exposes `explained_variance_ratio_` and per-indicator `loadings_`. It
-> refuses to fit when no indicator varies (there is no direction to learn) and returns `NaN` for
-> any incomplete row rather than projecting a partial vector onto a different scale.
+> 🔧 **In proxyscore:** `PCAScore` fits the first principal component and exposes
+> `explained_variance_ratio_` and per-indicator `loadings_`. It refuses to fit when no indicator
+> varies (there is no direction to learn) and returns `NaN` for any incomplete row rather than
+> projecting a partial vector onto a different scale. On orientation, note the precondition: the
+> component's sign is aligned with the *mean standardized indicator*, which yields "higher = more
+> construct" **only when most inputs are positively oriented** — so reverse-coded indicators
+> (more support tickets = less healthy) must be flipped before fitting. PCA cannot infer the
+> semantic direction of your construct; after fitting, check `loadings_` and confirm the
+> direction against an outcome.
 
 ### The academic and econometric end
 
@@ -332,10 +337,16 @@ different slice of the population. **Two honest limitations:** PSI is sensitive 
 (too many bins manufacture spurious instability), and it cannot tell benign seasonality from
 real degradation — compare like-for-like periods.
 
-> 🔧 **In proxyscore:** the stability check computes PSI per period against a baseline with these
-> exact bands, guards against undersized periods (where PSI is too noisy to trust), and reports
-> the worst period. Because the score's normalization is fit once and reused, the PSI reflects
-> real population movement rather than a moving ruler.
+> 🔧 **In proxyscore:** the stability check computes PSI per period against a baseline (the
+> earliest period in sorted order) with these exact bands, guards against undersized periods
+> (where PSI is too noisy to trust), and reports the worst period.
+>
+> One caveat the tool *cannot* enforce for you: PSI only reflects real population movement if the
+> score itself is on a **fixed ruler** across periods — i.e. you fit one `CompositeScore` /
+> `PCAScore` instance and `transform` every period with it. `check_stability` and `ProxyAudit`
+> accept a precomputed score column and have no way to know how it was produced; if you
+> re-normalize or re-fit the score *separately within each period*, you have rescaled the ruler,
+> which can hide genuine drift or manufacture phantom drift. Fit once, apply everywhere.
 
 ### Goodhart's Law and "green churn"
 
@@ -376,17 +387,24 @@ and reckless for another.
 - A score that **automatically suspends an account, denies a renewal discount, or pages a
   human** is making per-record decisions. There, an individual misclassification is a wrong
   action, so the score needs proven, sharp, validated signal — and you need to know it holds in
-  every segment you'll apply it to.
+  every segment you'll apply it to. Association strength alone isn't enough here: automation also
+  needs calibrated probabilities, performance verified *at the operating threshold* you'll act
+  on, prospective (forward-in-time) validation, an understanding of how the score behaves once
+  it starts *triggering interventions*, and any applicable fairness/legal review.
 
 Treating these the same is how a "directional dashboard metric" quietly becomes an automation
 trigger and starts making confident mistakes. The discipline is to state, explicitly, what tier
 of decision a score has *earned* the right to drive.
 
-> 🔧 **In proxyscore:** this is exactly what the audit verdict encodes:
+> 🔧 **In proxyscore:** the audit verdict encodes the *evidence* tier — how strong and clean the
+> validation is — which is the gate to, not the entirety of, that decision:
 >
 > - **`decision_grade`** — strong validated downstream signal, no failures, no unresolved
->   warnings: cleared for per-record decisions *within the validated population and time
->   horizon*.
+>   warnings, every supplied check assessable: a strong *candidate* for per-record decisions
+>   within the validated scope. It establishes association and the absence of problems among the
+>   checks you ran; it does **not** by itself establish calibration, operating-threshold
+>   performance, prospective validation, intervention effects, or governance clearance — those
+>   remain the analyst's last mile before flipping on automation.
 > - **`directional`** — real but moderate signal, or a strong signal with unresolved warnings:
 >   good for dashboards and triage, not for automated per-record action.
 > - **`not_validated`** — a check failed, or there was no outcome to validate against: an
@@ -401,41 +419,65 @@ of decision a score has *earned* the right to drive.
 ## 8. References & further reading
 
 The methods above draw on three literatures. These are the load-bearing sources behind the
-concepts and thresholds in this guide.
+concepts and thresholds in this guide. Academic-classic citations are given in full so they can
+be located by DOI search even where no stable open link exists.
 
 **Latent constructs, reflective vs. formative, and SEM**
 
-- m-clark, *Graphical & Latent Variable Modeling* — accessible treatment of latent variables and
-  measurement invariance.
-- *Structural Equation Modeling with Latent Variables and Composites* (arXiv:2508.06112) —
-  reflective vs. formative specification and the bias from misclassifying them.
+- M. Clark, *Graphical & Latent Variable Modeling.*
+  <https://m-clark.github.io/sem/latent-variables.html> — accessible treatment of latent
+  variables and measurement invariance.
+- Schamberger, T., et al. *Structural Equation Modeling with Latent Variables and Composites.*
+  arXiv:2508.06112. <https://arxiv.org/abs/2508.06112> — reflective vs. formative specification
+  and the bias from misclassifying them.
 
 **Construct validity (convergent, discriminant, HTMT)**
 
-- Fornell & Larcker (1981) — the AVE-based criterion (now considered insufficient on its own).
-- Henseler, Ringle & Sarstedt (2015) — the **HTMT** ratio for discriminant validity; thresholds
-  0.85 / 0.90 and the bootstrap procedure.
-- Ab Hamid et al. (2017), *Discriminant Validity Assessment: Fornell-Larcker vs. HTMT* — the
-  comparison and why HTMT is the modern standard.
+- Fornell, C., & Larcker, D. F. (1981). "Evaluating structural equation models with unobservable
+  variables and measurement error." *Journal of Marketing Research*, 18(1), 39–50. — the AVE
+  criterion (now considered insufficient on its own for discriminant validity).
+- Henseler, J., Ringle, C. M., & Sarstedt, M. (2015). "A new criterion for assessing discriminant
+  validity in variance-based structural equation modeling." *Journal of the Academy of Marketing
+  Science*, 43(1), 115–135. <https://doi.org/10.1007/s11747-014-0403-8> — the **HTMT** ratio;
+  the 0.85 / 0.90 thresholds and the bootstrap procedure.
+- Ab Hamid, M. R., Sami, W., & Mohmad Sidek, M. H. (2017). "Discriminant validity assessment: Use
+  of Fornell & Larcker criterion versus HTMT criterion." *Journal of Physics: Conference Series*,
+  890, 012163. <https://doi.org/10.1088/1742-6596/890/1/012163> — the comparison and why HTMT is
+  the modern standard.
 
 **Econometric proxy estimation**
 
-- Olley & Pakes (1996) — investment as a proxy for unobserved productivity; control-function
-  inversion.
-- Levinsohn & Petrin (2003) — intermediate inputs as a smoother proxy.
-- Ackerberg, Caves & Frazer — collinearity corrections; production functions with fixed effects.
+- Olley, G. S., & Pakes, A. (1996). "The dynamics of productivity in the telecommunications
+  equipment industry." *Econometrica*, 64(6), 1263–1297. — investment as a proxy for unobserved
+  productivity; control-function inversion.
+- Levinsohn, J., & Petrin, A. (2003). "Estimating production functions using inputs to control
+  for unobservables." *Review of Economic Studies*, 70(2), 317–341. — intermediate inputs as a
+  smoother proxy.
+- Ackerberg, D. A., Caves, K., & Frazer, G. (2015). "Identification properties of recent
+  production function estimators." *Econometrica*, 83(6), 2411–2451. — collinearity corrections;
+  production functions with fixed effects.
 
 **Production monitoring and metric governance**
 
-- Burke, *Population Stability Index* — PSI computation and the 0.10 / 0.25 governance bands.
-- Coralogix / Encord, *A Practical Introduction to PSI* — binning procedure and limitations.
-- *Goodhart's Law: The Hidden Risk in Software Engineering Metrics* (Axify) — Goodhart's Law,
-  green churn, and the SPACE/DORA framing.
+- Burke, M. *Population Stability Index (PSI).*
+  <https://mwburke.github.io/data%20science/2018/04/29/population-stability-index.html> — PSI
+  computation and the 0.10 / 0.25 governance bands.
+- Coralogix, *A Practical Introduction to Population Stability Index (PSI).*
+  <https://coralogix.com/ai-blog/a-practical-introduction-to-population-stability-index-psi/> —
+  binning procedure and limitations.
+- Axify, *Goodhart's Law: The Hidden Risk in Software Engineering Metrics.*
+  <https://axify.io/blog/goodhart-law> — Goodhart's Law, green churn, and the SPACE/DORA framing.
 
 **Industry customer-health practice**
 
-- Gainsight, Vitally, Realm — the five-category scorecard model (behavioral, support,
-  relationship, financial, feedback) and the construction/refinement pipeline.
+- Gainsight, *Customer Health Score Explained.*
+  <https://www.gainsight.com/blog/customer-health-scores/>
+- Vitally, *How to Create a Customer Health Score with 4 Metrics.*
+  <https://www.vitally.io/post/how-to-create-a-customer-health-score-with-four-metrics>
+- Realm, *What Is a Customer Health Score.*
+  <https://www.withrealm.com/blog/what-is-customer-health-score> — the five-category scorecard
+  model (behavioral, support, relationship, financial, feedback) and the construction/refinement
+  pipeline.
 
 ---
 

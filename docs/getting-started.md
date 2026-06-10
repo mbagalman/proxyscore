@@ -2,8 +2,11 @@
 
 This is a hands-on walkthrough: by the end you will have run a full audit, read the
 verdict, interpreted every check, seen what failures look like, and pointed the tool at
-your own data. Every snippet here is runnable, and every block of output is real — copied
-from an actual run against the synthetic dataset that ships with the package.
+your own data. Every snippet in the synthetic-data walkthrough (sections 1–4, 6) is
+runnable as written, and every block of output is real — copied from an actual run against
+the dataset that ships with the package. The "bring your own data" snippets in section 5
+are templates: they use placeholder variables (`mydf`, `X`, `s`, `y`) you'd replace with
+your own.
 
 If you just want the API surface at a glance, the [README](../README.md) has terse
 reference snippets. This guide is the slower, narrative version that teaches *interpretation* —
@@ -90,9 +93,21 @@ license you to do*:
 
 | Verdict | What it means | What you can do with the score |
 | --- | --- | --- |
-| **`decision_grade`** | Strong validated signal, no failures, no unresolved warnings. | Drive per-record decisions: prioritization queues, automated alerts, account actions — within the validated population and time horizon. |
-| **`directional`** | Real but moderate signal, *or* a strong signal with unresolved warnings. | Read trends and dashboards; rank and triage. **Not** safe for automated per-record action. |
+| **`decision_grade`** | Strong validated signal, no failures, no unresolved warnings, and every *supplied* check was assessable. | A strong candidate for per-record decisions (prioritization queues, automated alerts, account actions) within the validated scope — but not an automatic green light (see the caveat below). |
+| **`directional`** | Real but moderate signal, *or* a strong signal with unresolved warnings or unassessable supplied checks. | Read trends and dashboards; rank and triage. **Not** safe for automated per-record action. |
 | **`not_validated`** | A check failed, or there was no outcome to validate against. | Treat the score as an untested hypothesis, not a measurement. |
+
+> **What `decision_grade` does *not* establish.** The audit confirms that the score carries
+> strong association with the outcome and has no problems *among the checks you supplied*. It
+> does **not** establish probability calibration, performance at the specific operating
+> threshold you'll act on (precision/recall, false-positive cost), prospective or external
+> validation, the effect of any *intervention* the score triggers, or legal/fairness clearance.
+> Note too that the default "strong" bar is oriented AUC ≥ 0.65 (overridable), and checks whose
+> inputs you didn't supply (no `segments` → no bias check, no `period` → no stability check) are
+> simply **outside the validated scope** — their absence does not block a `decision_grade`
+> verdict. Treat `decision_grade` as "strong evidence, cleared to *evaluate* for automation,"
+> not "cleared to automate." The last mile — threshold tuning, a prospective holdout, monitoring,
+> and applicable governance — is yours.
 
 ### Why is this audit `directional` and not `decision_grade`?
 
@@ -103,7 +118,8 @@ conservatism: the tool will not hand you a decision-grade stamp while something 
 In this case the warning is benign (we'll see exactly why in the next section), but *you* have
 to make that call and either accept it or address it. `decision_grade` requires the downstream
 check to pass **and** zero warnings **and** no supplied check left unassessable. The bar is
-high on purpose — decision-grade is a license to act on individual records automatically.
+high on purpose — it's the threshold at which a score becomes a serious *candidate* for driving
+per-record automation (after the last-mile checks above), not merely a dashboard metric.
 
 ### Downstream validation is the gate
 
@@ -326,12 +342,17 @@ If you can't supply an outcome yet, the audit is honest about it rather than imp
 ```python
 report = ProxyAudit(indicators=df[indicator_cols], score=df["health_score"]).run()
 
-print(report.verdict)         # Verdict.NOT_VALIDATED
+print(report.verdict)               # Verdict.NOT_VALIDATED
 print(report["downstream"].status)  # Status.SKIP
+print(report["stability"].status)   # Status.SKIP  (no period supplied)
+print(report["segments"].status)    # Status.SKIP  (no segments supplied)
 ```
 
-The indicator, stability, and structural checks still run and are useful — but without a
-delayed hard outcome, the score remains an untested hypothesis. Collect an outcome and re-audit.
+Each check runs only when its required inputs are present: the **indicator** check always runs
+and is useful on its own, but **stability**, **leakage**, and **segments** skip here because we
+passed neither an outcome, a period, nor segments. Without a delayed hard outcome the score
+remains an untested hypothesis — collect one and re-audit. (Supply `period` and `segments` and
+those checks come to life, as in the full audit in section 1.)
 
 ---
 
@@ -349,11 +370,26 @@ arrays of the same length.
 report = ProxyAudit(
     indicators=mydf[["feature_a", "feature_b", "feature_c"]],
     score=mydf["my_score"],              # omit this to have an equal-weight one built for you
-    outcome=mydf["renewed_within_90d"],  # binary or continuous; numeric, bool, or two-valued strings
+    outcome=mydf["renewed_within_90d"],  # binary or continuous; numeric, bool, or two-valued
     segments=mydf["plan_tier"],          # optional
-    period=mydf["snapshot_month"],       # optional; any sortable labels
+    period=mydf["snapshot_month"],       # optional; chronologically sortable labels (see below)
 ).run()
 ```
+
+### Encoding the outcome (which value is "the event"?)
+
+A binary outcome can be `0`/`1`, `True`/`False`, or two-valued strings — but you need to know
+how the positive class is chosen: **the larger or later-sorting value becomes the event (1).**
+So `1` beats `0`, `True` beats `False`, and alphabetically `"yes"` > `"no"`, `"churned"` >
+`"active"`. This mapping drives `base_rate`, `n_pos`/`n_neg`, lift, and the outcome rates.
+
+The catch: it's easy to get backwards. With labels like `"approved"`/`"denied"`, lexical order
+makes `"denied"` the event — probably the opposite of what you meant. Automatic polarity
+detection will still make the *headline AUC* look sensible (the tool orients for signal
+strength either way), so a flipped encoding hides quietly in the per-class numbers rather than
+announcing itself. **Recommendation: encode the event you care about as `1` and everything else
+as `0` yourself**, e.g. `outcome=(mydf["status"] == "churned").astype(int)`. Then there's
+nothing to second-guess.
 
 ### The alignment contract
 
@@ -370,6 +406,23 @@ the single most common way to get a meaningless-but-impressive audit. If your "e
 score" is computed from the same time window in which the outcome was realized, you have a
 time machine, not a predictor — and the leakage check can only catch the blatant cases, not a
 subtle whole-score timing error. Snapshot your indicators, *then* wait for the outcome.
+
+### Period labels and the stability baseline
+
+When you pass `period`, the stability check measures each period's PSI **against a baseline,
+and the baseline defaults to the earliest period in *sorted* order.** That makes label choice
+matter: `"2025-01"`, ISO dates, ordered timestamps, or integer period indexes all sort
+chronologically, so the baseline is the genuine first period. But raw month *names*
+(`"January"`, `"February"`, …) sort *alphabetically* — `"April"` would become your baseline.
+Use chronologically sortable labels.
+
+`ProxyAudit` always uses the earliest-sorted period as the baseline. If you need an explicit
+one (say, a specific stable reference month), call the standalone check directly:
+
+```python
+from proxyscore import check_stability
+check_stability(mydf["my_score"], mydf["snapshot_month"], baseline_period="2025-03")
+```
 
 ### Don't have a score yet?
 
@@ -388,14 +441,31 @@ score = CompositeScore(
     scaling="zscore",   # or "minmax", "rank"
 ).fit_transform(df[indicator_cols])
 
-# data-driven alternative: first principal component of the standardized indicators
-score = PCAScore().fit_transform(df[indicator_cols])
+# data-driven alternative: first principal component of the standardized indicators.
+# IMPORTANT: re-orient reverse-oriented indicators (more = LESS healthy) BEFORE fitting,
+# so every input points the same way as the construct:
+oriented = df[indicator_cols].copy()
+oriented["support_tickets"] *= -1
+oriented["payment_delay_days"] *= -1
+
+pca = PCAScore().fit(oriented)
+score = pca.transform(oriented)
+print(pca.loadings_)                 # inspect: do the signs make sense?
+print(pca.explained_variance_ratio_) # how much of one shared dimension did it capture?
 ```
 
-Both refuse to invent numbers from missing data: `CompositeScore` renormalizes a partial row
-over the weights actually present and returns `NaN` below a coverage floor; `PCAScore` returns
-`NaN` for any incomplete row. (If you omit `score` from `ProxyAudit` entirely, an equal-weight
-z-score composite is built for you and the report says so.)
+A caveat on direction: `PCAScore` can only align its sign with the *average* standardized
+indicator — it cannot read the semantic meaning of your construct. That heuristic gives you
+"higher = more construct" **only when most inputs are positively oriented**, which is exactly
+why you re-orient the reverse-coded ones first (above). After fitting, always check two things:
+that `loadings_` have sensible signs, and that the score actually points the right way by
+validating it against an outcome (a `directional`-or-better audit confirms the direction is
+real, not an artifact of the indicator mix).
+
+Both constructors refuse to invent numbers from missing data: `CompositeScore` renormalizes a
+partial row over the weights actually present and returns `NaN` below a coverage floor;
+`PCAScore` returns `NaN` for any incomplete row. (If you omit `score` from `ProxyAudit`
+entirely, an equal-weight z-score composite is built for you and the report says so.)
 
 ### Tightening the thresholds
 
