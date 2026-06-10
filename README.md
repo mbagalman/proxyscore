@@ -142,6 +142,10 @@ against observable consequences the construct is supposed to drive. That's why t
 treats **downstream validation against a delayed hard outcome as the gate** to decision-grade
 status: a score that has never been confronted with reality is an opinion with units.
 
+For the full picture — reflective vs. formative constructs, the stack of validity types,
+leakage, PSI monitoring, Goodhart's Law, and decision-grade thinking, each mapped to what the
+tool does — see **[A practitioner's guide to proxy metrics](docs/proxy-metrics-guide.md)**.
+
 ## Roadmap
 
 - Convergent/discriminant validity for multi-construct setups (AVE, HTMT)

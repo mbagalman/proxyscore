@@ -7,6 +7,11 @@ Project documentation for `proxyscore`.
 - **[Getting started](getting-started.md)** — a hands-on, end-to-end walkthrough: run a
   full audit, read the verdict, interpret every check, see what failures look like, and
   point the tool at your own data. Every example uses real output.
+- **[A practitioner's guide to proxy metrics](proxy-metrics-guide.md)** — the *why* behind
+  the tool: the full lifecycle of constructing, validating, and using scores for things you
+  can't directly measure (reflective vs. formative, criterion validity, leakage, PSI,
+  Goodhart's Law, decision-grade thinking), with each concept mapped to what the library does,
+  what's on the roadmap, and what belongs to a specialized tool.
 
 The top-level [`README.md`](../README.md) has the quick reference and the project's
 positioning; [`CHANGELOG.md`](../CHANGELOG.md) tracks releases.
