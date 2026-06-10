@@ -1,0 +1,146 @@
+# proxyscore
+
+**Construct, validate, and monitor proxy scores for latent business constructs.**
+
+*For when the business needs a number for something it cannot directly observe.*
+
+[![CI](https://github.com/paradoxresolution/proxyscore/actions/workflows/ci.yml/badge.svg)](https://github.com/paradoxresolution/proxyscore/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/proxyscore.svg)](https://pypi.org/project/proxyscore/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+Customer health, lead quality, engagement, account risk, brand strength, demand — businesses
+constantly need numbers for things nobody can measure directly. Analysts answer with proxy
+scores: weighted composites of observable indicators. What's usually missing is any rigorous
+answer to the question that follows: **is this score real, or are we just compounding noise?**
+
+`proxyscore` is a validation toolkit for exactly that question. It audits a proxy score for:
+
+| Check | Question it answers |
+| --- | --- |
+| **indicators** | Are the inputs healthy? Missingness, dead columns, weak items, reliability (Cronbach's alpha), redundancy (correlation pairs, VIF), single-indicator dominance. |
+| **stability** | Does the score distribution hold still over time? Population Stability Index per period with the standard 0.10 / 0.25 bands. |
+| **downstream** | Does the score predict a *delayed hard outcome* it should predict (renewal, churn, conversion)? AUC / rank correlation, lift and capture by score band, automatic polarity detection. |
+| **leakage** | Is the score secretly built from the outcome? Flags indicators with implausibly strong standalone association with the outcome, and leak-suggestive column names. |
+| **segments** | Does the score mean the same thing for every segment? Score-level gaps (standardized mean difference) and per-segment validity divergence. |
+
+The audit ends in a verdict:
+
+- **`decision_grade`** — strong validated signal, no failures: usable for per-record decisions
+  (prioritization, alerting, automation) within the validated scope.
+- **`directional`** — real but moderate signal, or unresolved warnings: usable for dashboards
+  and trend reading, not for automated per-record action.
+- **`not_validated`** — a failed check or no outcome validation: the score is an untested
+  hypothesis, not a measurement.
+
+## Install
+
+```bash
+pip install proxyscore
+```
+
+Requires Python ≥ 3.10. Depends only on `numpy`, `pandas`, and `scipy`.
+
+## Quick start
+
+```python
+from proxyscore import ProxyAudit
+
+report = ProxyAudit(
+    indicators=df[["logins", "feature_depth", "support_tickets", "nps", "payment_delay_days"]],
+    score=df["health_score"],            # omit to have one built for you
+    outcome=df["churned_next_quarter"],  # delayed hard outcome (observed AFTER the score window)
+    segments=df["plan_tier"],            # optional
+    period=df["month"],                  # optional
+).run()
+
+print(report.verdict)        # Verdict.DECISION_GRADE / DIRECTIONAL / NOT_VALIDATED
+print(report.summary())      # one row per check: status + plain-language summary
+print(report.to_markdown())  # full audit report, ready for a PR or wiki page
+
+report["downstream"].metrics    # {'auc': ..., 'auc_oriented': ..., 'spearman': ..., ...}
+report["segments"].details      # per-segment DataFrame
+```
+
+No data handy? There's a synthetic example with a known latent construct, a plantable leak,
+and plantable drift:
+
+```python
+from proxyscore.datasets import make_customer_health
+
+df = make_customer_health(n=3000, include_leak=True)
+```
+
+## Building a score
+
+If you don't have a score yet, two pragmatic constructors are included, both with a
+fit/transform API so weights learned on a development sample can be applied to later
+periods without re-fitting (which keeps stability monitoring honest):
+
+```python
+from proxyscore import CompositeScore, PCAScore
+
+# industry-scorecard style: normalize, weight, sum (negative weight = reverse-oriented)
+score = CompositeScore(
+    weights={"logins": 1, "support_tickets": -1, "payment_delay_days": -0.5},
+    scaling="zscore",  # or "minmax", "rank"
+).fit_transform(df[indicator_cols])
+
+# data-driven: first principal component of the standardized indicators
+score = PCAScore().fit_transform(df[indicator_cols])
+```
+
+## Using checks individually
+
+Every check is also a standalone function returning a `CheckResult` with a status
+(`pass` / `warn` / `fail` / `skip`), headline metrics, a details DataFrame, and
+interpretation notes:
+
+```python
+from proxyscore import (
+    check_indicators, check_stability, check_downstream, check_segments, check_leakage,
+    psi, lift_table, cronbach_alpha, vif,
+)
+
+check_stability(df["score"], df["month"]).metrics      # {'max_psi': ..., 'n_periods': ...}
+lift_table(df["score"], df["churned"], n_bands=10)     # decile lift / capture table
+```
+
+All thresholds are overridable:
+
+```python
+from proxyscore import ProxyAudit, Thresholds
+
+strict = Thresholds(min_auc_strong=0.75, psi_unstable=0.2, leak_auc=0.85)
+report = ProxyAudit(indicators=X, score=s, outcome=y, thresholds=strict).run()
+```
+
+## What this library deliberately is not
+
+- **Not an SEM/CFA package.** If you have survey-style reflective constructs and want full
+  structural equation modeling, use `semopy` or `lavaan`. `proxyscore` targets the messy
+  behavioral/transactional data of real business stacks, where those assumptions rarely hold.
+- **Not an ML observability platform.** Tools like Evidently monitor model inputs and outputs;
+  `proxyscore` validates whether an engineered score measures the *hidden concept* it claims to.
+- **Not a guarantee.** Leakage and bias checks are heuristics. The only hard guarantee against
+  leakage is a pipeline that snapshots indicators strictly before the outcome window opens.
+
+## Validation philosophy
+
+A proxy for a latent construct can never be validated against the construct itself — only
+against observable consequences the construct is supposed to drive. That's why the audit
+treats **downstream validation against a delayed hard outcome as the gate** to decision-grade
+status: a score that has never been confronted with reality is an opinion with units.
+
+## Roadmap
+
+- Convergent/discriminant validity for multi-construct setups (AVE, HTMT)
+- Measurement invariance testing across segments
+- Eigenvector/loading drift for PCA-based scores
+- Time-lagged outcome alignment helpers and survival-style validation
+- HTML report export
+
+Contributions and issue reports are welcome.
+
+## License
+
+[MIT](LICENSE)
