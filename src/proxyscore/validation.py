@@ -130,6 +130,13 @@ def check_downstream(
         raise ValueError(f"n_bands must be an integer >= 2, got {n_bands!r}")
     t = thresholds or Thresholds()
     df = _paired(score, outcome)
+    if df["outcome"].nunique() < 2:
+        return CheckResult(
+            "downstream",
+            Status.SKIP,
+            "Outcome has no variation - downstream validity cannot be assessed "
+            "against a constant outcome.",
+        )
     if len(df) < 30:
         return CheckResult(
             "downstream",

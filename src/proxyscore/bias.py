@@ -66,7 +66,11 @@ def segment_summary(score, segments, outcome=None) -> pd.DataFrame:
     for seg, sub in df.groupby("segment", observed=True):
         rest = df.loc[df["segment"] != seg, "score"]
         if len(rest) > 1 and len(sub) > 1:
-            pooled = np.sqrt((sub["score"].var(ddof=1) + rest.var(ddof=1)) / 2)
+            n1, n2 = len(sub), len(rest)
+            pooled = np.sqrt(
+                ((n1 - 1) * sub["score"].var(ddof=1) + (n2 - 1) * rest.var(ddof=1))
+                / (n1 + n2 - 2)
+            )
         else:
             pooled = np.nan
         smd = (sub["score"].mean() - rest.mean()) / pooled if pooled and pooled > 0 else np.nan
@@ -150,12 +154,16 @@ def check_segments(
             )
         else:
             assessable = eval_table["n_outcome"] >= t.min_segment_size
+        # a NaN validity (e.g. constant score or outcome within the segment)
+        # is unassessed evidence, not a segment to drop silently
+        assessable &= eval_table["validity"].notna()
         unassessed = list(eval_table.index[~assessable])
         if unassessed:
             statuses.append(Status.WARN)
             problems.append(
                 f"validity could not be assessed in segment(s) {unassessed} "
-                f"(insufficient outcome data) - consistency across segments is unproven"
+                f"(insufficient outcome data or no computable validity) - "
+                f"consistency across segments is unproven"
             )
         v = eval_table.loc[assessable, "validity"].dropna()
         if len(v) >= 2:

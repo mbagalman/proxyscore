@@ -63,17 +63,22 @@ def leakage_scan(
 
     rows = []
     for c in X.columns:
-        df = pd.concat([X[c], y01], axis=1).dropna()
-        n_overlap = int(len(df))
+        # rename both sides: an indicator itself named "outcome" must not
+        # collide with the outcome column in the concatenated frame
+        pair = pd.concat(
+            [X[c].rename("__indicator__"), y01.rename("__outcome__")], axis=1
+        ).dropna()
+        ind, out = pair["__indicator__"], pair["__outcome__"]
+        n_overlap = int(len(pair))
         assoc = np.nan
         # association needs variation on both sides of the overlap (a tied-rank
         # AUC of 0.5 from a constant indicator is degenerate, not evidence)
-        if n_overlap >= t.min_leak_rows and df[c].nunique() >= 2 and df.iloc[:, 1].nunique() >= 2:
+        if n_overlap >= t.min_leak_rows and ind.nunique() >= 2 and out.nunique() >= 2:
             if binary:
-                auc = auc_score(df[c].to_numpy(), df.iloc[:, 1].to_numpy())
+                auc = auc_score(ind.to_numpy(), out.to_numpy())
                 assoc = max(auc, 1 - auc) if not np.isnan(auc) else np.nan
             else:
-                rho = spearman(df[c], df.iloc[:, 1])
+                rho = spearman(ind, out)
                 assoc = abs(rho) if not np.isnan(rho) else np.nan
         assessed = bool(np.isfinite(assoc))
         threshold = t.leak_auc if binary else t.leak_corr

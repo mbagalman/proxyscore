@@ -29,9 +29,13 @@ def psi(expected, actual, bins: int = 10) -> float:
     if len(expected) == 0 or len(actual) == 0:
         return float("nan")
     edges = np.unique(np.quantile(expected, np.linspace(0, 1, bins + 1)))
-    if len(edges) < 3:  # nearly-constant baseline: fall back to 2 bins around midpoint
+    if len(edges) < 3:
+        # nearly-constant baseline: bracket the midpoint so a shift in EITHER
+        # direction leaves the middle bin and registers as a change
         mid = edges.mean()
-        edges = np.array([-np.inf, mid, np.inf])
+        half = (edges.max() - edges.min()) / 2
+        eps = half if half > 0 else max(abs(mid), 1.0) * 1e-9
+        edges = np.array([-np.inf, mid - eps, mid + eps, np.inf])
     else:
         edges[0], edges[-1] = -np.inf, np.inf
     e_counts, _ = np.histogram(expected, bins=edges)

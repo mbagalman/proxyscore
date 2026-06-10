@@ -35,3 +35,11 @@ Hardening, round 2:
 - `check_downstream` validates `n_bands` at its boundary and no longer swallows `ValueError`s from lift-table construction.
 - One consistent `TypeError` for non-numeric outcomes with more than two values across downstream, segment, and leakage checks.
 - Infinite values are rejected in scores and numeric outcomes everywhere (`psi`, stability, downstream, segments, `ProxyAudit`), not just in indicator frames.
+
+Hardening, round 3:
+
+- PSI's near-constant-baseline fallback now brackets the midpoint with three bins, so a shift in either direction registers - previously an arbitrarily large upward shift from a constant baseline scored PSI 0.0 while a downward shift alarmed.
+- `leakage_scan` no longer crashes when an indicator column is named `outcome` (internal columns are renamed before pairing).
+- Segment SMD now uses the sample-size-weighted pooled standard deviation instead of an unweighted variance average that assumed equal segment sizes.
+- A segment whose validity is not computable (e.g. constant score within the segment) is reported as unassessed with a WARN instead of being silently dropped from the comparison.
+- `check_downstream` SKIPs with a clear message on a constant outcome instead of failing with a misleading "no usable downstream signal".
