@@ -25,8 +25,13 @@ def psi(expected, actual, bins: int = 10) -> float:
     0.10-0.25 moderate shift, >= 0.25 significant shift.
     """
     ensure_count(bins, 2, "bins")
-    expected = np.asarray(pd.Series(expected).dropna(), dtype=float)
-    actual = np.asarray(pd.Series(actual).dropna(), dtype=float)
+    expected_s = pd.Series(expected).dropna()
+    actual_s = pd.Series(actual).dropna()
+    for name, sample in (("expected", expected_s), ("actual", actual_s)):
+        if pd.api.types.is_complex_dtype(sample):
+            raise TypeError(f"psi {name} sample must be real-valued, got complex dtype")
+    expected = np.asarray(expected_s, dtype=float)
+    actual = np.asarray(actual_s, dtype=float)
     if np.isinf(expected).any() or np.isinf(actual).any():
         raise ValueError(
             "psi inputs contain infinite values; replace them with NaN or finite "

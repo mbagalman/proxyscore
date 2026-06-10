@@ -21,6 +21,13 @@ def as_indicator_frame(indicators: pd.DataFrame) -> pd.DataFrame:
             f"indicator columns must be numeric; non-numeric columns: {non_numeric}. "
             "Encode categorical indicators before passing them in."
         )
+    complex_cols = [
+        c for c in indicators.columns if pd.api.types.is_complex_dtype(indicators[c])
+    ]
+    if complex_cols:
+        raise TypeError(
+            f"indicator columns must be real-valued; complex columns: {complex_cols}"
+        )
     X = indicators.astype(float)
     inf_counts = np.isinf(X).sum()
     inf_cols = inf_counts[inf_counts > 0]
@@ -85,7 +92,10 @@ def validate_score(s: pd.Series, what: str = "score") -> None:
 
 
 def ensure_finite(s: pd.Series, what: str) -> None:
-    """Raise when a numeric Series contains infinite values (NaN is allowed)."""
+    """Raise when a numeric Series is complex or contains infinite values
+    (NaN is allowed)."""
+    if pd.api.types.is_complex_dtype(s):
+        raise TypeError(f"{what} must be real-valued, got complex dtype")
     if not pd.api.types.is_numeric_dtype(s):
         return
     n_inf = int(np.isinf(s.to_numpy(dtype="float64", na_value=np.nan)).sum())
@@ -103,6 +113,8 @@ def check_outcome_type(outcome: pd.Series) -> None:
     outcomes of any type (strings, booleans, categories).
     """
     y = outcome.dropna()
+    if pd.api.types.is_complex_dtype(y):
+        raise TypeError("outcome must be real-valued; complex outcomes are not supported")
     if pd.api.types.is_numeric_dtype(y):
         return
     if y.nunique() == 2:

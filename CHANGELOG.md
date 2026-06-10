@@ -52,3 +52,9 @@ Hardening, round 4:
 - Scores must be real-valued numeric at every public boundary (`ProxyAudit`, downstream, stability, segments, indicator dominance) - one clear TypeError instead of pandas/SciPy internals.
 - Two-valued outcomes with mutually unorderable labels (e.g. `1` and `"yes"`) are rejected with a clear error at validation time instead of crashing in `sorted()`.
 - `bins` / `n_bands` are validated as integers (>= 2, numpy integers accepted, bool rejected) consistently across `psi`, `psi_over_time`, `check_stability`, `lift_table`, and `check_downstream`.
+
+Hardening, round 5:
+
+- Complex values are rejected across all quantitative inputs (indicators, outcomes, PSI samples) instead of being silently cast to their real component.
+- `Thresholds` validation completed: every numeric threshold must be finite, count fields reject booleans and floats, segment gap thresholds are range-checked, and `leak_name_patterns` must be an iterable of non-empty strings (copied defensively).
+- `PCAScore.fit` raises a clear error when no indicator varies in the fitted rows, instead of storing an arbitrary direction from a degenerate SVD.

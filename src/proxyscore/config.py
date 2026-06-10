@@ -8,7 +8,10 @@ individual ``check_*`` functions.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
+
+from ._utils import ensure_count
 
 
 @dataclass
@@ -85,6 +88,29 @@ class Thresholds:
     )
 
     def __post_init__(self) -> None:
+        numeric = [
+            "max_missing_rate",
+            "min_item_rest_corr",
+            "min_cronbach_alpha",
+            "max_pairwise_corr",
+            "max_score_indicator_corr",
+            "psi_stable",
+            "psi_unstable",
+            "min_auc_strong",
+            "min_auc_weak",
+            "min_corr_strong",
+            "min_corr_weak",
+            "max_segment_smd",
+            "max_segment_auc_gap",
+            "max_segment_corr_gap",
+            "leak_auc",
+            "leak_corr",
+            "max_vif",
+        ]
+        for name in numeric:
+            v = getattr(self, name)
+            if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v):
+                raise ValueError(f"{name} must be a finite number, got {v!r}")
         unit_interval = [
             "max_missing_rate",
             "min_item_rest_corr",
@@ -115,10 +141,34 @@ class Thresholds:
             raise ValueError(f"leak_auc must be in [0.5, 1], got {self.leak_auc}")
         if self.max_vif <= 1:
             raise ValueError(f"max_vif must be > 1, got {self.max_vif}")
-        gaps = (self.max_segment_smd, self.max_segment_auc_gap, self.max_segment_corr_gap)
-        if any(g <= 0 for g in gaps):
-            raise ValueError("segment gap thresholds must be positive")
+        if self.max_segment_smd <= 0:
+            raise ValueError(f"max_segment_smd must be positive, got {self.max_segment_smd}")
+        if not 0 < self.max_segment_auc_gap <= 1:
+            # oriented per-segment AUCs live in [0.5, 1], so a gap can be at most 0.5,
+            # but accept up to 1 for callers comparing raw AUCs
+            raise ValueError(
+                f"max_segment_auc_gap must be in (0, 1], got {self.max_segment_auc_gap}"
+            )
+        if not 0 < self.max_segment_corr_gap <= 2:
+            # polarity-oriented correlations live in [-1, 1], so gaps live in (0, 2]
+            raise ValueError(
+                f"max_segment_corr_gap must be in (0, 2], got {self.max_segment_corr_gap}"
+            )
         for name in ("min_segment_size", "min_class_count", "min_leak_rows", "min_period_rows"):
-            v = getattr(self, name)
-            if not (isinstance(v, int) and v >= 1):
-                raise ValueError(f"{name} must be a positive integer, got {v!r}")
+            ensure_count(getattr(self, name), 1, name)
+        if isinstance(self.leak_name_patterns, str):
+            raise TypeError(
+                "leak_name_patterns must be an iterable of strings, not a single string"
+            )
+        try:
+            patterns = list(self.leak_name_patterns)
+        except TypeError as exc:
+            raise TypeError(
+                "leak_name_patterns must be an iterable of non-empty strings"
+            ) from exc
+        bad = [p for p in patterns if not isinstance(p, str) or not p]
+        if bad:
+            raise TypeError(
+                f"leak_name_patterns entries must be non-empty strings, got {bad!r}"
+            )
+        self.leak_name_patterns = patterns

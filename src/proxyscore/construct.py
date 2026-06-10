@@ -161,6 +161,11 @@ class PCAScore:
         self.std_ = X.std(ddof=0).replace(0, 1.0)
         Z = ((X - self.mean_) / self.std_).to_numpy()
         _, s, vt = np.linalg.svd(Z - Z.mean(axis=0), full_matrices=False)
+        if float((s**2).sum()) == 0.0:
+            raise ValueError(
+                "PCAScore cannot be fitted: no indicator varies across the fitted rows, "
+                "so there is no principal direction to learn"
+            )
         loadings = vt[0]
         # align sign with the average indicator so higher score = more construct
         if (Z @ loadings).std() > 0 and np.corrcoef(Z @ loadings, Z.mean(axis=1))[0, 1] < 0:
