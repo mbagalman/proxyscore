@@ -30,6 +30,7 @@ from ._utils import (
     auc_score,
     check_outcome_type,
     check_unique_index,
+    ensure_finite,
     is_binary,
     spearman,
     to_binary,
@@ -58,6 +59,7 @@ def leakage_scan(
     check_unique_index(X.index, "indicators")
     y = aligned_series(outcome, "outcome", X.index)
     check_outcome_type(y)
+    ensure_finite(y, "outcome")
     binary = is_binary(y)
     y01 = to_binary(y) if binary else y
 
@@ -106,7 +108,13 @@ def check_leakage(
 ) -> CheckResult:
     """Flag indicators that look like they encode the outcome."""
     t = thresholds or Thresholds()
-    y = outcome if isinstance(outcome, pd.Series) else pd.Series(np.asarray(outcome))
+    # align and validate BEFORE the constant-outcome early return, so malformed
+    # inputs fail the same way they would on any other path
+    X = as_indicator_frame(indicators)
+    check_unique_index(X.index, "indicators")
+    y = aligned_series(outcome, "outcome", X.index)
+    check_outcome_type(y)
+    ensure_finite(y, "outcome")
     if y.dropna().nunique() < 2:
         return CheckResult(
             "leakage",
@@ -114,7 +122,7 @@ def check_leakage(
             "Outcome has no variation - association with it is undefined, so leakage "
             "could not be assessed.",
         )
-    table = leakage_scan(indicators, outcome, t)
+    table = leakage_scan(X, y, t)
 
     unassessed = table[~table["assessed"]]
     if len(unassessed) == len(table):

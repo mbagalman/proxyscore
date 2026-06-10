@@ -71,6 +71,19 @@ def as_series(values, name: str) -> pd.Series:
     return pd.Series(np.asarray(values), name=name)
 
 
+def ensure_count(value, minimum: int, name: str) -> None:
+    """Raise when a count-like parameter is not an integer >= ``minimum``."""
+    if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < minimum:
+        raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+
+
+def validate_score(s: pd.Series, what: str = "score") -> None:
+    """Raise unless a score Series is real-valued numeric and finite."""
+    if not pd.api.types.is_numeric_dtype(s) or pd.api.types.is_complex_dtype(s):
+        raise TypeError(f"{what} must be real-valued numeric, got dtype {s.dtype}")
+    ensure_finite(s, what)
+
+
 def ensure_finite(s: pd.Series, what: str) -> None:
     """Raise when a numeric Series contains infinite values (NaN is allowed)."""
     if not pd.api.types.is_numeric_dtype(s):
@@ -93,6 +106,14 @@ def check_outcome_type(outcome: pd.Series) -> None:
     if pd.api.types.is_numeric_dtype(y):
         return
     if y.nunique() == 2:
+        vals = list(y.unique())
+        try:
+            sorted(vals)
+        except TypeError as exc:
+            raise TypeError(
+                f"two-valued outcome labels must be mutually orderable to identify the "
+                f"positive class; got {vals!r}. Encode them consistently (e.g. 0/1) first."
+            ) from exc
         return
     raise TypeError(
         f"outcome must be numeric or two-valued; got a non-numeric outcome with "

@@ -5,7 +5,14 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ._utils import aligned_series, as_indicator_frame, check_unique_index, fmt, zscore
+from ._utils import (
+    aligned_series,
+    as_indicator_frame,
+    check_unique_index,
+    fmt,
+    validate_score,
+    zscore,
+)
 from .config import Thresholds
 from .results import CheckResult, Status, worst
 
@@ -113,6 +120,7 @@ def check_indicators(
     if score is not None:
         check_unique_index(X.index, "indicators")
         score = aligned_series(score, "score", X.index)
+        validate_score(score)
     summary = indicator_summary(X)
     summary["vif"] = vif(X)
     pairs = redundant_pairs(X, t.max_pairwise_corr)
@@ -128,10 +136,13 @@ def check_indicators(
         "(e.g. support tickets in a health score); flip its sign or weight if so.",
     ]
 
-    dead = summary[summary["std"] == 0]
+    dead = summary[(summary["std"] == 0) | (summary["n_unique"] == 0)]
     if len(dead) > 0:
         statuses.append(Status.FAIL)
-        problems.append(f"{len(dead)} indicator(s) with zero variance: {list(dead.index)}")
+        problems.append(
+            f"{len(dead)} indicator(s) with zero variance or no observed values: "
+            f"{list(dead.index)}"
+        )
 
     high_missing = summary[summary["missing_rate"] > t.max_missing_rate]
     if len(high_missing) > 0:

@@ -7,7 +7,7 @@ from enum import Enum
 
 import pandas as pd
 
-from ._utils import aligned_series, as_indicator_frame, check_unique_index, ensure_finite
+from ._utils import aligned_series, as_indicator_frame, check_unique_index, validate_score
 from .bias import check_segments
 from .config import Thresholds
 from .construct import CompositeScore
@@ -156,7 +156,7 @@ class ProxyAudit:
             self.score = CompositeScore().fit_transform(self.indicators)
         else:
             self.score = aligned_series(score, "proxy_score", idx)
-            ensure_finite(self.score, "score")
+            validate_score(self.score)
         self.outcome = aligned_series(outcome, "outcome", idx) if outcome is not None else None
         self.segments = aligned_series(segments, "segment", idx) if segments is not None else None
         self.period = aligned_series(period, "period", idx) if period is not None else None

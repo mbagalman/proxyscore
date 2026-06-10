@@ -21,11 +21,13 @@ from ._utils import (
     auc_score,
     check_outcome_type,
     check_unique_index,
+    ensure_count,
     ensure_finite,
     fmt,
     is_binary,
     spearman,
     to_binary,
+    validate_score,
 )
 from .config import Thresholds
 from .results import CheckResult, Status
@@ -35,7 +37,7 @@ def _paired(score, outcome) -> pd.DataFrame:
     """Align and validate score and outcome, dropping incomplete rows."""
     s = as_series(score, "score")
     check_unique_index(s.index, "score")
-    ensure_finite(s, "score")
+    validate_score(s)
     y = aligned_series(outcome, "outcome", s.index)
     check_outcome_type(y)
     ensure_finite(y, "outcome")
@@ -51,8 +53,7 @@ def lift_table(score, outcome, n_bands: int = 10, ascending: bool = False) -> pd
     ``ascending=True`` puts the lowest scores in band 1 instead (useful
     for risk scores read low-to-high).
     """
-    if n_bands < 2:
-        raise ValueError(f"n_bands must be >= 2, got {n_bands}")
+    ensure_count(n_bands, 2, "n_bands")
     df = _paired(score, outcome)
     if not pd.api.types.is_numeric_dtype(df["outcome"]):
         if is_binary(df["outcome"]):
@@ -126,8 +127,7 @@ def check_downstream(
     n_bands: int = 10,
 ) -> CheckResult:
     """Judge whether the score carries decision-grade signal about the outcome."""
-    if not isinstance(n_bands, int) or n_bands < 2:
-        raise ValueError(f"n_bands must be an integer >= 2, got {n_bands!r}")
+    ensure_count(n_bands, 2, "n_bands")
     t = thresholds or Thresholds()
     df = _paired(score, outcome)
     if df["outcome"].nunique() < 2:

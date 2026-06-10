@@ -111,7 +111,9 @@ class CompositeScore:
                 ref = self.fit_values_[c].dropna().sort_values().to_numpy()
                 vals = X[c].to_numpy()
                 if len(ref) == 0:
-                    pct = np.full(len(vals), 0.5)
+                    # no reference distribution was learned for this column;
+                    # fabricating a neutral rank would be a silent number
+                    pct = np.full(len(vals), np.nan)
                 else:
                     pct = np.searchsorted(ref, vals, side="right") / len(ref)
                 scaled[c] = np.where(np.isnan(vals), np.nan, pct)

@@ -32,6 +32,7 @@ from ._utils import (
     is_binary,
     spearman,
     to_binary,
+    validate_score,
 )
 from .config import Thresholds
 from .results import CheckResult, Status, worst
@@ -46,7 +47,7 @@ def segment_summary(score, segments, outcome=None) -> pd.DataFrame:
     """
     s = as_series(score, "score")
     check_unique_index(s.index, "score")
-    ensure_finite(s, "score")
+    validate_score(s)
     g = aligned_series(segments, "segment", s.index)
     parts = [s, g]
     if outcome is not None:
@@ -134,9 +135,12 @@ def check_segments(
         "(see per-segment outcome rates in the details table).",
     ]
     if len(small) > 0:
-        notes.append(
-            f"Skipped {len(small)} segment(s) with n < {t.min_segment_size}: "
-            f"{list(small.index)}"
+        # an excluded supplied segment is unresolved evidence, not a footnote -
+        # the warning keeps the overall verdict from claiming full coverage
+        statuses.append(Status.WARN)
+        problems.append(
+            f"segment(s) {list(small.index)} excluded from assessment "
+            f"(n < {t.min_segment_size}) - score level and validity are unverified there"
         )
 
     big_smd = eval_table[eval_table["smd_vs_rest"].abs() > t.max_segment_smd]

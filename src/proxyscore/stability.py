@@ -5,7 +5,14 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ._utils import aligned_series, as_series, check_unique_index, ensure_finite, fmt
+from ._utils import (
+    aligned_series,
+    as_series,
+    check_unique_index,
+    ensure_count,
+    fmt,
+    validate_score,
+)
 from .config import Thresholds
 from .results import CheckResult, Status
 
@@ -17,8 +24,7 @@ def psi(expected, actual, bins: int = 10) -> float:
     extended to cover the full real line. Rules of thumb: < 0.10 stable,
     0.10-0.25 moderate shift, >= 0.25 significant shift.
     """
-    if bins < 2:
-        raise ValueError(f"bins must be >= 2, got {bins}")
+    ensure_count(bins, 2, "bins")
     expected = np.asarray(pd.Series(expected).dropna(), dtype=float)
     actual = np.asarray(pd.Series(actual).dropna(), dtype=float)
     if np.isinf(expected).any() or np.isinf(actual).any():
@@ -48,7 +54,7 @@ def psi(expected, actual, bins: int = 10) -> float:
 def _score_period_frame(score, period) -> pd.DataFrame:
     s = as_series(score, "score")
     check_unique_index(s.index, "score")
-    ensure_finite(s, "score")
+    validate_score(s)
     p = aligned_series(period, "period", s.index)
     return pd.concat([s, p], axis=1).dropna()
 
@@ -60,8 +66,7 @@ def psi_over_time(score, period, baseline_period=None, bins: int = 10) -> pd.Dat
     Returns a DataFrame with one row per non-baseline period (``period``,
     ``n``, ``psi``).
     """
-    if bins < 2:
-        raise ValueError(f"bins must be >= 2, got {bins}")
+    ensure_count(bins, 2, "bins")
     df = _score_period_frame(score, period)
     periods = sorted(df["period"].unique())
     if len(periods) < 2:
@@ -94,6 +99,7 @@ def check_stability(
     comparison periods are excluded from grading and listed in the notes.
     """
     t = thresholds or Thresholds()
+    ensure_count(bins, 2, "bins")
     df = _score_period_frame(score, period)
     periods = sorted(df["period"].unique())
     if len(periods) < 2:

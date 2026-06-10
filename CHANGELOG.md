@@ -43,3 +43,12 @@ Hardening, round 3:
 - Segment SMD now uses the sample-size-weighted pooled standard deviation instead of an unweighted variance average that assumed equal segment sizes.
 - A segment whose validity is not computable (e.g. constant score within the segment) is reported as unassessed with a WARN instead of being silently dropped from the comparison.
 - `check_downstream` SKIPs with a clear message on a constant outcome instead of failing with a misleading "no usable downstream signal".
+
+Hardening, round 4:
+
+- Segments excluded for size (`n < min_segment_size`) now produce a WARN naming them instead of a footnote, so a partially-assessed segment audit caps the overall verdict at `directional`.
+- Rank scaling returns NaN for a column that had no observed values at fit time instead of fabricating percentile 0.5; an all-missing indicator now FAILs the indicator quality check.
+- `check_leakage` aligns and validates inputs (index, length, outcome type, finiteness) before its constant-outcome early return, and leakage now rejects infinite outcomes like every other check.
+- Scores must be real-valued numeric at every public boundary (`ProxyAudit`, downstream, stability, segments, indicator dominance) - one clear TypeError instead of pandas/SciPy internals.
+- Two-valued outcomes with mutually unorderable labels (e.g. `1` and `"yes"`) are rejected with a clear error at validation time instead of crashing in `sorted()`.
+- `bins` / `n_bands` are validated as integers (>= 2, numpy integers accepted, bool rejected) consistently across `psi`, `psi_over_time`, `check_stability`, `lift_table`, and `check_downstream`.
