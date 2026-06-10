@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ._utils import as_indicator_frame, fmt, zscore
+from ._utils import aligned_series, as_indicator_frame, check_unique_index, fmt, zscore
 from .config import Thresholds
 from .results import CheckResult, Status, worst
 
@@ -47,7 +47,7 @@ def cronbach_alpha(indicators: pd.DataFrame) -> float:
     expected to covary. Reverse-oriented indicators should be flipped
     first, otherwise alpha is understated.
     """
-    X = zscore(as_indicator_frame(indicators)).dropna()
+    X = zscore(as_indicator_frame(indicators).dropna())
     k = X.shape[1]
     if k < 2 or len(X) < 3:
         return float("nan")
@@ -60,7 +60,7 @@ def cronbach_alpha(indicators: pd.DataFrame) -> float:
 
 def vif(indicators: pd.DataFrame) -> pd.Series:
     """Variance inflation factor per indicator (listwise-complete rows)."""
-    X = zscore(as_indicator_frame(indicators)).dropna()
+    X = zscore(as_indicator_frame(indicators).dropna())
     cols = list(X.columns)
     out = {}
     for c in cols:
@@ -110,6 +110,9 @@ def check_indicators(
     """
     t = thresholds or Thresholds()
     X = as_indicator_frame(indicators)
+    if score is not None:
+        check_unique_index(X.index, "indicators")
+        score = aligned_series(score, "score", X.index)
     summary = indicator_summary(X)
     summary["vif"] = vif(X)
     pairs = redundant_pairs(X, t.max_pairwise_corr)

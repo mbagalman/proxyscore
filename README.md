@@ -89,6 +89,13 @@ score = CompositeScore(
 score = PCAScore().fit_transform(df[indicator_cols])
 ```
 
+Missing data never silently becomes a number: `CompositeScore` renormalizes partially
+observed rows over the weights actually present and returns `NaN` once observed weight
+falls below `min_coverage` (default 0.5); `PCAScore` returns `NaN` for any incomplete row.
+
+All multi-input APIs enforce row alignment: a `Series` must carry the same index as the
+indicators (same labels, same order), and plain arrays must match their length exactly.
+
 ## Using checks individually
 
 Every check is also a standalone function returning a `CheckResult` with a status

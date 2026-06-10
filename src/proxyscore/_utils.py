@@ -8,7 +8,7 @@ from scipy import stats
 
 
 def as_indicator_frame(indicators: pd.DataFrame) -> pd.DataFrame:
-    """Validate and return a numeric indicator DataFrame."""
+    """Validate and return a numeric, finite indicator DataFrame."""
     if not isinstance(indicators, pd.DataFrame):
         raise TypeError("indicators must be a pandas DataFrame")
     if indicators.shape[1] < 1:
@@ -21,17 +21,54 @@ def as_indicator_frame(indicators: pd.DataFrame) -> pd.DataFrame:
             f"indicator columns must be numeric; non-numeric columns: {non_numeric}. "
             "Encode categorical indicators before passing them in."
         )
-    return indicators.astype(float)
+    X = indicators.astype(float)
+    inf_counts = np.isinf(X).sum()
+    inf_cols = inf_counts[inf_counts > 0]
+    if len(inf_cols) > 0:
+        raise ValueError(
+            f"indicators contain infinite values: {inf_cols.to_dict()} "
+            "(column: count). Replace them with NaN or a finite value first."
+        )
+    return X
 
 
-def as_series(values, name: str, index=None) -> pd.Series:
-    """Coerce array-like input to a Series, optionally adopting an index."""
+def check_unique_index(index: pd.Index, what: str) -> None:
+    """Raise when an index has duplicate labels (label alignment is ambiguous)."""
+    if index.has_duplicates:
+        dups = index[index.duplicated()].unique()[:5].tolist()
+        raise ValueError(
+            f"{what} index contains duplicate labels (e.g. {dups}). "
+            "Row alignment would be ambiguous; make the index unique first."
+        )
+
+
+def aligned_series(values, name: str, index: pd.Index) -> pd.Series:
+    """Coerce input to a Series aligned to ``index``, refusing silent mismatches.
+
+    A Series must carry exactly ``index`` (same labels, same order). An
+    array-like must have exactly ``len(index)`` elements and adopts the index.
+    """
     if isinstance(values, pd.Series):
+        if not values.index.equals(index):
+            raise ValueError(
+                f"{name} index does not match the indicator/score index (same labels in "
+                f"the same order required). Reindex it explicitly before passing it in."
+            )
         return values.rename(name)
     values = np.asarray(values)
-    if index is not None and len(values) == len(index):
-        return pd.Series(values, index=index, name=name)
-    return pd.Series(values, name=name)
+    if values.ndim != 1 or len(values) != len(index):
+        raise ValueError(
+            f"{name} has length {values.shape[0] if values.ndim else 0}, expected "
+            f"{len(index)} to align with the other inputs."
+        )
+    return pd.Series(values, index=index, name=name)
+
+
+def as_series(values, name: str) -> pd.Series:
+    """Coerce array-like input to a Series (used for the reference input itself)."""
+    if isinstance(values, pd.Series):
+        return values.rename(name)
+    return pd.Series(np.asarray(values), name=name)
 
 
 def is_binary(outcome: pd.Series) -> bool:
@@ -48,10 +85,15 @@ def to_binary(outcome: pd.Series) -> pd.Series:
 
 
 def zscore(df: pd.DataFrame) -> pd.DataFrame:
-    """Column-wise z-score; zero-variance columns become 0."""
-    std = df.std(ddof=0).replace(0, np.nan)
-    out = (df - df.mean()) / std
-    return out.fillna(0.0)
+    """Column-wise z-score. Missing values stay missing; zero-variance
+    columns become 0 (where observed)."""
+    std = df.std(ddof=0)
+    out = (df - df.mean()) / std.replace(0, np.nan)
+    zero_var = std == 0
+    if zero_var.any():
+        out.loc[:, zero_var] = 0.0
+        out = out.where(df.notna())
+    return out
 
 
 def auc_score(score: np.ndarray, outcome: np.ndarray) -> float:

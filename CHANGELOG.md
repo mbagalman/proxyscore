@@ -12,3 +12,17 @@ Initial release.
 - Segment bias audit: standardized mean differences across segments and per-segment validity divergence.
 - Leakage scan: indicators with suspiciously strong association with the outcome, and leak-suggestive column names.
 - Synthetic example dataset: `proxyscore.datasets.make_customer_health()`.
+
+Hardening (post-review, pre-publication):
+
+- Strict row-alignment contract: Series inputs must carry the indicator index (same labels, same order), array-likes must match its length exactly, and duplicate index labels are rejected — silent label-based misalignment between checks is no longer possible.
+- Explicit missing-data policy in score construction: missing indicators never become numbers. `CompositeScore` renormalizes partial rows over observed weights with a configurable `min_coverage` floor (NaN below it); `PCAScore` returns NaN for incomplete rows; rank scaling maps missing to NaN instead of percentile 1.0.
+- Binary downstream validation requires a minimum count of each outcome class (`min_class_count`, default 10) instead of accepting a single-event AUC.
+- Segment validity is only graded where there is enough outcome evidence per segment; segments without it are reported as unassessed (WARN), never folded into a "consistent" PASS.
+- Leakage check distinguishes clean, flagged, and unassessed indicators; it SKIPs when nothing was assessable and WARNs when some indicators were.
+- `cronbach_alpha` and `vif` are now genuinely listwise-complete (the internal z-score no longer mean-imputes missing values).
+- String/bool-labeled binary outcomes work end to end (lift tables included).
+- `CompositeScore` weights validated at fit: unknown keys, non-finite values, and zero total weight raise immediately.
+- `Thresholds.__post_init__` validates ranges and ordering; `bins`/`n_bands` must be >= 2.
+- PSI grading guards against undersized periods (`min_period_rows`, default 50): undersized baselines skip the check, undersized comparison periods are excluded and listed.
+- Infinite values are rejected at the indicator boundary with the offending columns named.

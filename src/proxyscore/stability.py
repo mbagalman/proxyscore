@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ._utils import as_series, fmt
+from ._utils import aligned_series, as_series, check_unique_index, fmt
 from .config import Thresholds
 from .results import CheckResult, Status
 
@@ -17,6 +17,8 @@ def psi(expected, actual, bins: int = 10) -> float:
     extended to cover the full real line. Rules of thumb: < 0.10 stable,
     0.10-0.25 moderate shift, >= 0.25 significant shift.
     """
+    if bins < 2:
+        raise ValueError(f"bins must be >= 2, got {bins}")
     expected = np.asarray(pd.Series(expected).dropna(), dtype=float)
     actual = np.asarray(pd.Series(actual).dropna(), dtype=float)
     if len(expected) == 0 or len(actual) == 0:
@@ -34,17 +36,23 @@ def psi(expected, actual, bins: int = 10) -> float:
     return float(np.sum((a_prop - e_prop) * np.log(a_prop / e_prop)))
 
 
-def psi_over_time(
-    score, period, baseline_period=None, bins: int = 10
-) -> pd.DataFrame:
+def _score_period_frame(score, period) -> pd.DataFrame:
+    s = as_series(score, "score")
+    check_unique_index(s.index, "score")
+    p = aligned_series(period, "period", s.index)
+    return pd.concat([s, p], axis=1).dropna()
+
+
+def psi_over_time(score, period, baseline_period=None, bins: int = 10) -> pd.DataFrame:
     """PSI of each period's score distribution against a baseline period.
 
     ``baseline_period`` defaults to the earliest period (sorted order).
-    Returns a DataFrame with one row per non-baseline period.
+    Returns a DataFrame with one row per non-baseline period (``period``,
+    ``n``, ``psi``).
     """
-    s = as_series(score, "score")
-    p = as_series(period, "period", index=s.index)
-    df = pd.concat([s, p], axis=1).dropna()
+    if bins < 2:
+        raise ValueError(f"bins must be >= 2, got {bins}")
+    df = _score_period_frame(score, period)
     periods = sorted(df["period"].unique())
     if len(periods) < 2:
         return pd.DataFrame(columns=["period", "n", "psi"])
@@ -68,21 +76,60 @@ def check_stability(
     bins: int = 10,
     thresholds: Thresholds | None = None,
 ) -> CheckResult:
-    """Judge score stability over time using PSI against the baseline period."""
+    """Judge score stability over time using PSI against the baseline period.
+
+    Periods (including the baseline) with fewer than
+    ``thresholds.min_period_rows`` rows are too noisy for fixed PSI
+    thresholds: an undersized baseline skips the check, and undersized
+    comparison periods are excluded from grading and listed in the notes.
+    """
     t = thresholds or Thresholds()
-    table = psi_over_time(score, period, baseline_period, bins)
-    if len(table) == 0:
+    df = _score_period_frame(score, period)
+    periods = sorted(df["period"].unique())
+    if len(periods) < 2:
         return CheckResult(
             "stability",
             Status.SKIP,
             "Fewer than two periods available - stability not assessed.",
         )
+    base = baseline_period if baseline_period is not None else periods[0]
+    base_n = int((df["period"] == base).sum())
+    if base_n < t.min_period_rows:
+        return CheckResult(
+            "stability",
+            Status.SKIP,
+            f"Baseline period {base!r} has only {base_n} rows "
+            f"(min_period_rows={t.min_period_rows}) - PSI would be too noisy to grade.",
+        )
+    table = psi_over_time(df["score"], df["period"], baseline_period, bins)
+    table["underpowered"] = table["n"] < t.min_period_rows
     table["band"] = pd.cut(
         table["psi"],
         [-np.inf, t.psi_stable, t.psi_unstable, np.inf],
         labels=["stable", "moderate_shift", "significant_shift"],
     )
-    worst_row = table.loc[table["psi"].idxmax()]
+    powered = table[~table["underpowered"]]
+    notes = [
+        "PSI compares each period's score distribution to the baseline period. "
+        "Seasonal businesses may show benign PSI spikes; compare like-for-like periods if so."
+    ]
+    if table["underpowered"].any():
+        skipped = list(table.loc[table["underpowered"], "period"])
+        notes.append(
+            f"Excluded {len(skipped)} period(s) with fewer than {t.min_period_rows} rows "
+            f"from grading: {skipped}"
+        )
+    if len(powered) == 0:
+        return CheckResult(
+            "stability",
+            Status.SKIP,
+            f"No comparison period has at least {t.min_period_rows} rows - "
+            f"stability not graded.",
+            {"n_periods": int(len(table) + 1)},
+            table,
+            notes,
+        )
+    worst_row = powered.loc[powered["psi"].idxmax()]
     max_psi = float(worst_row["psi"])
     if max_psi >= t.psi_unstable:
         status = Status.FAIL
@@ -101,12 +148,13 @@ def check_stability(
     else:
         status = Status.PASS
         text = (
-            f"Score distribution stable across {len(table) + 1} periods "
+            f"Score distribution stable across {len(powered) + 1} graded periods "
             f"(max PSI {fmt(max_psi)})."
         )
-    metrics = {"max_psi": max_psi, "n_periods": int(len(table) + 1)}
-    notes = [
-        "PSI compares each period's score distribution to the baseline period. "
-        "Seasonal businesses may show benign PSI spikes; compare like-for-like periods if so."
-    ]
+    metrics = {
+        "max_psi": max_psi,
+        "n_periods": int(len(table) + 1),
+        "n_graded_periods": int(len(powered) + 1),
+        "baseline_n": base_n,
+    }
     return CheckResult("stability", status, text, metrics, table, notes)

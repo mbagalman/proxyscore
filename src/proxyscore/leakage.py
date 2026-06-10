@@ -24,7 +24,15 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ._utils import as_indicator_frame, as_series, auc_score, is_binary, spearman, to_binary
+from ._utils import (
+    aligned_series,
+    as_indicator_frame,
+    auc_score,
+    check_unique_index,
+    is_binary,
+    spearman,
+    to_binary,
+)
 from .config import Thresholds
 from .results import CheckResult, Status, worst
 
@@ -37,20 +45,26 @@ def leakage_scan(
     """Per-indicator leakage diagnostics against the outcome.
 
     Returns a DataFrame with each indicator's association with the outcome
-    (oriented AUC for binary outcomes, |spearman| otherwise), whether its
-    name matches a leak-suggestive pattern, and a combined flag.
+    (oriented AUC for binary outcomes, |spearman| otherwise), the number of
+    overlapping rows it was computed on, whether the statistical check was
+    assessable at all (``assessed``), whether its name matches a
+    leak-suggestive pattern, and the statistical flag.
     """
     t = thresholds or Thresholds()
     X = as_indicator_frame(indicators)
-    y = as_series(outcome, "outcome", index=X.index)
-    binary = is_binary(y.dropna())
-    y01 = to_binary(y) if binary else None
+    check_unique_index(X.index, "indicators")
+    y = aligned_series(outcome, "outcome", X.index)
+    binary = is_binary(y)
+    y01 = to_binary(y) if binary else y
 
     rows = []
     for c in X.columns:
-        df = pd.concat([X[c], y01 if binary else y], axis=1).dropna()
+        df = pd.concat([X[c], y01], axis=1).dropna()
+        n_overlap = int(len(df))
+        assessed = n_overlap >= t.min_leak_rows
         assoc = np.nan
-        if len(df) >= 10:
+        stat_flag = False
+        if assessed:
             if binary:
                 auc = auc_score(df[c].to_numpy(), df.iloc[:, 1].to_numpy())
                 assoc = max(auc, 1 - auc) if not np.isnan(auc) else np.nan
@@ -59,8 +73,6 @@ def leakage_scan(
                 rho = spearman(df[c], df.iloc[:, 1])
                 assoc = abs(rho) if not np.isnan(rho) else np.nan
                 stat_flag = not np.isnan(assoc) and assoc >= t.leak_corr
-        else:
-            stat_flag = False
         name_l = str(c).lower()
         name_flag = any(p in name_l for p in t.leak_name_patterns)
         rows.append(
@@ -68,6 +80,8 @@ def leakage_scan(
                 "indicator": c,
                 "association": float(assoc) if not np.isnan(assoc) else np.nan,
                 "association_metric": "oriented_auc" if binary else "abs_spearman",
+                "n_overlap": n_overlap,
+                "assessed": bool(assessed),
                 "statistical_flag": bool(stat_flag),
                 "name_flag": bool(name_flag),
             }
@@ -83,6 +97,17 @@ def check_leakage(
     """Flag indicators that look like they encode the outcome."""
     t = thresholds or Thresholds()
     table = leakage_scan(indicators, outcome, t)
+
+    unassessed = table[~table["assessed"]]
+    if len(unassessed) == len(table):
+        return CheckResult(
+            "leakage",
+            Status.SKIP,
+            f"No indicator had at least {t.min_leak_rows} rows overlapping the outcome - "
+            f"statistical leakage could not be assessed at all.",
+            {"n_statistical_flags": 0, "n_unassessed": int(len(table))},
+            table.reset_index(),
+        )
 
     statuses: list[Status] = []
     problems: list[str] = []
@@ -102,15 +127,25 @@ def check_leakage(
             f"indicator name(s) suggest outcome content: {list(named.index)} - verify "
             f"these are snapshotted strictly before the outcome window"
         )
+    if len(unassessed) > 0:
+        statuses.append(Status.WARN)
+        problems.append(
+            f"statistical leakage could not be assessed for {list(unassessed.index)} "
+            f"(fewer than {t.min_leak_rows} rows overlapping the outcome)"
+        )
 
     status = worst(statuses)
     if status is Status.PASS:
-        text = "No leakage signals: no indicator is suspiciously close to the outcome."
+        text = (
+            f"No leakage signals: all {len(table)} indicators assessed, none "
+            f"suspiciously close to the outcome."
+        )
     else:
         text = "; ".join(problems)
     metrics = {
         "n_statistical_flags": int(table["statistical_flag"].sum()),
         "n_name_flags": int(table["name_flag"].sum()),
+        "n_unassessed": int(len(unassessed)),
         "max_association": float(table["association"].max())
         if table["association"].notna().any()
         else float("nan"),

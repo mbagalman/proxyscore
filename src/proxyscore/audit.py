@@ -7,7 +7,7 @@ from enum import Enum
 
 import pandas as pd
 
-from ._utils import as_indicator_frame, as_series
+from ._utils import aligned_series, as_indicator_frame, check_unique_index
 from .bias import check_segments
 from .config import Thresholds
 from .construct import CompositeScore
@@ -149,26 +149,16 @@ class ProxyAudit:
         thresholds: Thresholds | None = None,
     ):
         self.indicators = as_indicator_frame(indicators)
+        check_unique_index(self.indicators.index, "indicators")
+        idx = self.indicators.index
         self.score_provided = score is not None
         if score is None:
             self.score = CompositeScore().fit_transform(self.indicators)
         else:
-            self.score = as_series(score, "proxy_score", index=self.indicators.index)
-        self.outcome = (
-            as_series(outcome, "outcome", index=self.indicators.index)
-            if outcome is not None
-            else None
-        )
-        self.segments = (
-            as_series(segments, "segment", index=self.indicators.index)
-            if segments is not None
-            else None
-        )
-        self.period = (
-            as_series(period, "period", index=self.indicators.index)
-            if period is not None
-            else None
-        )
+            self.score = aligned_series(score, "proxy_score", idx)
+        self.outcome = aligned_series(outcome, "outcome", idx) if outcome is not None else None
+        self.segments = aligned_series(segments, "segment", idx) if segments is not None else None
+        self.period = aligned_series(period, "period", idx) if period is not None else None
         self.thresholds = thresholds or Thresholds()
 
     def run(self) -> AuditReport:
