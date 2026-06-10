@@ -70,6 +70,10 @@ from proxyscore.datasets import make_customer_health
 df = make_customer_health(n=3000, include_leak=True)
 ```
 
+> **New to the library?** The [Getting started guide](docs/getting-started.md) is a
+> hands-on walkthrough that runs a full audit, reads the verdict, interprets every check,
+> shows what failures look like, and covers bringing your own data — with real output throughout.
+
 ## Building a score
 
 If you don't have a score yet, two pragmatic constructors are included, both with a
