@@ -18,6 +18,7 @@ Two distinct questions are asked:
 
 from __future__ import annotations
 
+from typing import Any
 import numpy as np
 import pandas as pd
 
@@ -38,7 +39,7 @@ from .config import Thresholds
 from .results import CheckResult, Status, worst
 
 
-def segment_summary(score, segments, outcome=None) -> pd.DataFrame:
+def segment_summary(score: Any, segments: Any, outcome: Any = None) -> pd.DataFrame:
     """Per-segment score stats, SMD vs rest, and (optionally) validity.
 
     With an outcome, each row also carries ``n_outcome`` (rows with an
@@ -105,9 +106,9 @@ def segment_summary(score, segments, outcome=None) -> pd.DataFrame:
 
 
 def check_segments(
-    score,
-    segments,
-    outcome=None,
+    score: Any,
+    segments: Any,
+    outcome: Any = None,
     thresholds: Thresholds | None = None,
 ) -> CheckResult:
     """Audit score level and score validity across segments."""

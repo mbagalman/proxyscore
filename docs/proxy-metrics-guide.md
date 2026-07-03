@@ -114,8 +114,9 @@ Most business proxy scores — health, engagement, loyalty, risk — are **forma
 common methodological error is to validate a formative composite with reflective tools. If you
 run Cronbach's alpha or a factor analysis on a formative score and demand high inter-item
 correlation, you will "discover" that your perfectly good health score is "unreliable" and
-start deleting the very indicators that give it scope. Misclassifying a formative construct as
-reflective introduces severe parameter bias and leads to flatly wrong conclusions.
+start deleting the very indicators that give it scope. 
+
+The psychometric and structural equation modeling (SEM) literature has documented this exact pitfall extensively. As demonstrated by Schamberger et al. (see [References](#8-references--further-reading)), misclassifying a formative composite as a reflective latent variable introduces severe parameter bias and leads to flatly wrong conclusions about validity. Foundational papers by Jarvis et al. (2003) and MacKenzie et al. (2005) similarly warn that applying reflective reliability metrics (like Cronbach's alpha) to formative constructs is mathematically inappropriate.
 
 > 🔧 **In proxyscore:** the indicator-quality check computes reflective-style diagnostics
 > (Cronbach's alpha, item-rest correlation) because they're genuinely useful *if* your construct
@@ -427,8 +428,10 @@ be located by DOI search even where no stable open link exists.
 - M. Clark, *Graphical & Latent Variable Modeling.*
   <https://m-clark.github.io/sem/latent-variables.html> — accessible treatment of latent
   variables and measurement invariance.
+- Jarvis, C. B., MacKenzie, S. B., & Podsakoff, P. M. (2003). "A critical review of construct indicators and measurement model misspecification in marketing and consumer research." *Journal of Consumer Research*, 30(2), 199–218. <https://doi.org/10.1086/376806> — foundational paper establishing the frequency and danger of confusing formative and reflective models.
+- MacKenzie, S. B., Podsakoff, P. M., & Jarvis, C. B. (2005). "The problem of measurement model misspecification in behavioral and organizational research and some recommended solutions." *Journal of Applied Psychology*, 90(4), 710–730. <https://doi.org/10.1037/0021-9010.90.4.710>
 - Schamberger, T., et al. *Structural Equation Modeling with Latent Variables and Composites.*
-  arXiv:2508.06112. <https://arxiv.org/abs/2508.06112> — reflective vs. formative specification
+  arXiv:2508.06112. <https://arxiv.org/abs/2508.06112> — modern synthesis of reflective vs. formative specification
   and the bias from misclassifying them.
 
 **Construct validity (convergent, discriminant, HTMT)**

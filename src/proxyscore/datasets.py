@@ -59,7 +59,9 @@ def make_customer_health(
     if drift:
         latent = latent + drift * month_idx / max(n_months - 1, 1)
 
-    noise = lambda s: rng.normal(0, s, n)  # noqa: E731
+    def noise(s: float) -> np.ndarray:
+        return rng.normal(0, s, n)
+
     logins = np.clip(np.round(np.exp(1.5 + 0.6 * latent + noise(0.4))), 0, None)
     feature_depth = np.clip(2 + 1.5 * latent + noise(1.0), 0, 10)
     support_tickets = np.clip(np.round(2 - 1.2 * latent + noise(1.2)), 0, None)
@@ -84,7 +86,9 @@ def make_customer_health(
         }
     )
 
-    z = lambda s: (s - s.mean()) / s.std(ddof=0)  # noqa: E731
+    def z(s: pd.Series) -> pd.Series:
+        return (s - s.mean()) / s.std(ddof=0)
+
     df["health_score"] = (
         z(df["logins"])
         + z(df["feature_depth"])

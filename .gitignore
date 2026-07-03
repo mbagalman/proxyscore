@@ -24,3 +24,6 @@ Thumbs.db
 
 # Local Claude Code settings
 .claude/
+
+# Internal Code Review
+docs/code-review-findings.md

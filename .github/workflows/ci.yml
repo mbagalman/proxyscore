@@ -21,6 +21,8 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
       - name: Lint
-        run: ruff check .
+        run: |
+          ruff check .
+          mypy src/proxyscore
       - name: Test
         run: pytest -q

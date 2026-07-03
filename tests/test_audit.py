@@ -100,3 +100,34 @@ def test_health_score_actually_predicts_churn(df):
 def test_audit_rejects_non_dataframe():
     with pytest.raises(TypeError):
         ProxyAudit(indicators=[[1, 2], [3, 4]])
+
+
+def test_audit_warns_small_sample():
+    df = make_customer_health(n=50, seed=10)
+    report = ProxyAudit(
+        indicators=df[INDICATORS], score=df["health_score"], outcome=df["churned"]
+    ).run()
+    assert report["sample_size"].status is Status.WARN
+    assert report.verdict in (Verdict.DIRECTIONAL, Verdict.NOT_VALIDATED)
+
+
+def test_audit_downsamples_large_sample():
+    from proxyscore.config import Thresholds
+    df = make_customer_health(n=1000, seed=11)
+    
+    # Test setting max_audit_rows lower than n
+    thresholds = Thresholds(max_audit_rows=500)
+    report = ProxyAudit(
+        indicators=df[INDICATORS], 
+        score=df["health_score"], 
+        outcome=df["churned"],
+        thresholds=thresholds
+    ).run()
+    
+    assert report["sample_size"].status is Status.PASS
+    assert "downsampled 1000 rows to 500" in report["sample_size"].summary
+    assert report["sample_size"].metrics["audit_rows"] == 500
+    
+    # Check that score and outcome were also correctly aligned to the subset
+    # which is implicit since check_downstream would fail if indices didn't match.
+    assert report["downstream"].status is Status.PASS

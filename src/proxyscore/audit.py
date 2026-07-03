@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Any
 
 import pandas as pd
 
@@ -142,15 +143,18 @@ class ProxyAudit:
     def __init__(
         self,
         indicators: pd.DataFrame,
-        score=None,
-        outcome=None,
-        segments=None,
-        period=None,
+        score: Any = None,
+        outcome: Any = None,
+        segments: Any = None,
+        period: Any = None,
         thresholds: Thresholds | None = None,
     ):
+        self.thresholds = thresholds or Thresholds()
+        
         self.indicators = as_indicator_frame(indicators)
         check_unique_index(self.indicators.index, "indicators")
         idx = self.indicators.index
+        
         self.score_provided = score is not None
         if score is None:
             self.score = CompositeScore().fit_transform(self.indicators)
@@ -160,12 +164,49 @@ class ProxyAudit:
         self.outcome = aligned_series(outcome, "outcome", idx) if outcome is not None else None
         self.segments = aligned_series(segments, "segment", idx) if segments is not None else None
         self.period = aligned_series(period, "period", idx) if period is not None else None
-        self.thresholds = thresholds or Thresholds()
+
+        n_initial = len(self.indicators)
+        if self.thresholds.max_audit_rows is not None and n_initial > self.thresholds.max_audit_rows:
+            self._downsampled_from = n_initial
+            sample_idx = self.indicators.sample(n=self.thresholds.max_audit_rows, random_state=42).index
+            self.indicators = self.indicators.loc[sample_idx]
+            self.score = self.score.loc[sample_idx]
+            if self.outcome is not None:
+                self.outcome = self.outcome.loc[sample_idx]
+            if self.segments is not None:
+                self.segments = self.segments.loc[sample_idx]
+            if self.period is not None:
+                self.period = self.period.loc[sample_idx]
+        else:
+            self._downsampled_from = None
 
     def run(self) -> AuditReport:
         """Run all applicable checks and grade the score."""
         t = self.thresholds
         results: list[CheckResult] = []
+
+        n_rows = len(self.indicators)
+        if self._downsampled_from is not None:
+            results.append(
+                CheckResult(
+                    "sample_size",
+                    Status.PASS,
+                    f"Audit randomly downsampled {self._downsampled_from} rows to {t.max_audit_rows} "
+                    "for performance. This preserves statistical precision while saving memory.",
+                    metrics={"original_rows": self._downsampled_from, "audit_rows": t.max_audit_rows},
+                )
+            )
+        elif n_rows < t.min_audit_rows:
+            results.append(
+                CheckResult(
+                    "sample_size",
+                    Status.WARN,
+                    f"Audit run on {n_rows} row(s), which is fewer than the "
+                    f"recommended minimum of {t.min_audit_rows}. "
+                    "Metrics may be noisy and validity conclusions may not generalize.",
+                    metrics={"n_rows": n_rows, "min_audit_rows": t.min_audit_rows},
+                )
+            )
 
         ind = check_indicators(self.indicators, self.score, t)
         if not self.score_provided:
@@ -215,25 +256,35 @@ class ProxyAudit:
         verdict, reason = self._grade(results)
         return AuditReport(verdict, reason, results)
 
-    def _grade(self, results: list[CheckResult]) -> tuple[Verdict, str]:
-        by_name = {r.name: r for r in results}
-        fails = [r.name for r in results if r.status is Status.FAIL]
-        warns = [r.name for r in results if r.status is Status.WARN]
-        # A SKIP on a check whose input was never supplied means "not
-        # applicable". A SKIP despite a supplied input means evidence was
-        # missing inside the claimed validation scope - that must not be
-        # hidden behind a decision-grade verdict.
+    def _find_unassessable_checks(self, results: list[CheckResult]) -> list[str]:
+        """Find checks that were skipped despite having their required inputs supplied.
+        
+        A SKIP on a check whose input was never supplied (e.g. no segments provided) 
+        means "not applicable". However, a SKIP *despite* a supplied input means evidence 
+        was insufficient inside the claimed validation scope (e.g. segments were provided, 
+        but they were all too small to evaluate). This must not be hidden behind a 
+        decision-grade verdict.
+
+        'downstream' is excluded here because a skipped downstream check is a fatal 
+        error that downgrades the verdict to NOT_VALIDATED immediately in `_grade`.
+        """
         supplied = {
             "stability": self.period is not None,
             "downstream": self.outcome is not None,
             "leakage": self.outcome is not None,
             "segments": self.segments is not None,
         }
-        unassessable = [
+        return [
             r.name
             for r in results
             if r.status is Status.SKIP and supplied.get(r.name, False) and r.name != "downstream"
         ]
+
+    def _grade(self, results: list[CheckResult]) -> tuple[Verdict, str]:
+        by_name = {r.name: r for r in results}
+        fails = [r.name for r in results if r.status is Status.FAIL]
+        warns = [r.name for r in results if r.status is Status.WARN]
+        unassessable = self._find_unassessable_checks(results)
 
         if fails:
             return (

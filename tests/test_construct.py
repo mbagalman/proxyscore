@@ -75,3 +75,46 @@ def test_non_numeric_rejected():
     df = pd.DataFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
     with pytest.raises(TypeError):
         CompositeScore().fit(df)
+
+
+def test_composite_get_set_params():
+    cs = CompositeScore(weights={"a": 2.0}, min_coverage=0.8)
+    params = cs.get_params()
+    assert params["weights"] == {"a": 2.0}
+    assert params["min_coverage"] == 0.8
+    
+    cs2 = CompositeScore().set_params(**params)
+    assert cs2.weights == {"a": 2.0}
+    assert cs2.min_coverage == 0.8
+
+
+def test_composite_save_load(tmp_path, X):
+    cs = CompositeScore().fit(X)
+    path = tmp_path / "model.pkl"
+    cs.save(path)
+    
+    cs2 = CompositeScore.load(path)
+    assert cs2.columns_ == cs.columns_
+    assert (cs2.center_ == cs.center_).all()
+    assert (cs2.scale_ == cs.scale_).all()
+    assert np.allclose(cs2.transform(X), cs.transform(X))
+
+
+def test_pca_get_set_params():
+    ps = PCAScore()
+    assert ps.get_params() == {}
+    ps.set_params()
+
+
+def test_pca_save_load(tmp_path, X):
+    ps = PCAScore().fit(X)
+    path = tmp_path / "model.pkl"
+    ps.save(path)
+    
+    ps2 = PCAScore.load(path)
+    assert ps2.columns_ == ps.columns_
+    assert (ps2.mean_ == ps.mean_).all()
+    assert (ps2.std_ == ps.std_).all()
+    assert (ps2.loadings_ == ps.loadings_).all()
+    assert ps2.explained_variance_ratio_ == ps.explained_variance_ratio_
+    assert np.allclose(ps2.transform(X), ps.transform(X))

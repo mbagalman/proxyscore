@@ -9,13 +9,43 @@ individual ``check_*`` functions.
 from __future__ import annotations
 
 import math
+import os
 from dataclasses import dataclass, field
 
 from ._utils import ensure_count
 
 
+def _default_leak_patterns() -> list[str]:
+    base = [
+        "churn",
+        "renew",
+        "cancel",
+        "terminat",
+        "outcome",
+        "target",
+        "label",
+        "won",
+        "lost",
+        "converted",
+        "closed",
+    ]
+    env = os.environ.get("PROXYSCORE_LEAK_PATTERNS")
+    if env:
+        for p in env.split(","):
+            p = p.strip()
+            if p and p not in base:
+                base.append(p)
+    return base
+
+
 @dataclass
 class Thresholds:
+    # --- overall -----------------------------------------------------------
+    #: warn when the overall audit is run on fewer rows than this
+    min_audit_rows: int = 100
+    #: randomly downsample the audit to this many rows if exceeded
+    max_audit_rows: int | None = 500000
+
     # --- indicator quality -------------------------------------------------
     #: warn when an indicator is missing in more than this share of rows
     max_missing_rate: float = 0.20
@@ -71,24 +101,11 @@ class Thresholds:
     #: reported as unassessed rather than clean
     min_leak_rows: int = 10
     #: column-name fragments that suggest the indicator encodes the outcome
-    leak_name_patterns: list[str] = field(
-        default_factory=lambda: [
-            "churn",
-            "renew",
-            "cancel",
-            "terminat",
-            "outcome",
-            "target",
-            "label",
-            "won",
-            "lost",
-            "converted",
-            "closed",
-        ]
-    )
+    leak_name_patterns: list[str] = field(default_factory=_default_leak_patterns)
 
     def __post_init__(self) -> None:
         numeric = [
+            "min_audit_rows",
             "max_missing_rate",
             "min_item_rest_corr",
             "min_cronbach_alpha",
@@ -154,8 +171,10 @@ class Thresholds:
             raise ValueError(
                 f"max_segment_corr_gap must be in (0, 2], got {self.max_segment_corr_gap}"
             )
-        for name in ("min_segment_size", "min_class_count", "min_leak_rows", "min_period_rows"):
+        for name in ("min_audit_rows", "min_segment_size", "min_class_count", "min_leak_rows", "min_period_rows"):
             ensure_count(getattr(self, name), 1, name)
+        if self.max_audit_rows is not None:
+            ensure_count(self.max_audit_rows, self.min_audit_rows, "max_audit_rows")
         if isinstance(self.leak_name_patterns, str):
             raise TypeError(
                 "leak_name_patterns must be an iterable of strings, not a single string"

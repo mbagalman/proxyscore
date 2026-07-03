@@ -21,6 +21,8 @@ the outcome window opens.
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
@@ -41,7 +43,7 @@ from .results import CheckResult, Status, worst
 
 def leakage_scan(
     indicators: pd.DataFrame,
-    outcome,
+    outcome: Any,
     thresholds: Thresholds | None = None,
 ) -> pd.DataFrame:
     """Per-indicator leakage diagnostics against the outcome.
@@ -103,7 +105,7 @@ def leakage_scan(
 
 def check_leakage(
     indicators: pd.DataFrame,
-    outcome,
+    outcome: Any,
     thresholds: Thresholds | None = None,
 ) -> CheckResult:
     """Flag indicators that look like they encode the outcome."""

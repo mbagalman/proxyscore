@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -49,7 +50,7 @@ def check_unique_index(index: pd.Index, what: str) -> None:
         )
 
 
-def aligned_series(values, name: str, index: pd.Index) -> pd.Series:
+def aligned_series(values: Any, name: str, index: pd.Index) -> pd.Series:
     """Coerce input to a Series aligned to ``index``, refusing silent mismatches.
 
     A Series must carry exactly ``index`` (same labels, same order). An
@@ -71,14 +72,14 @@ def aligned_series(values, name: str, index: pd.Index) -> pd.Series:
     return pd.Series(values, index=index, name=name)
 
 
-def as_series(values, name: str) -> pd.Series:
+def as_series(values: Any, name: str) -> pd.Series:
     """Coerce array-like input to a Series (used for the reference input itself)."""
     if isinstance(values, pd.Series):
         return values.rename(name)
     return pd.Series(np.asarray(values), name=name)
 
 
-def ensure_count(value, minimum: int, name: str) -> None:
+def ensure_count(value: Any, minimum: int, name: str) -> None:
     """Raise when a count-like parameter is not an integer >= ``minimum``."""
     if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < minimum:
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
@@ -143,7 +144,7 @@ def to_binary(outcome: pd.Series) -> pd.Series:
     vals = sorted(outcome.dropna().unique())
     if len(vals) != 2:
         raise ValueError("outcome is not binary")
-    return (outcome == vals[1]).astype(float).where(outcome.notna())
+    return cast(pd.Series, (outcome == vals[1]).astype(float).where(outcome.notna()))
 
 
 def zscore(df: pd.DataFrame) -> pd.DataFrame:

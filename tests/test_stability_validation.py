@@ -104,3 +104,25 @@ def test_lift_table_monotone_signal():
     # band 1 = highest scores = highest outcome rate for positive signal
     assert lt.iloc[0]["outcome_rate"] > lt.iloc[-1]["outcome_rate"]
     assert lt.iloc[0]["lift"] > 1.5
+
+
+def test_downstream_highly_imbalanced_binary():
+    rng = np.random.default_rng(42)
+    score = pd.Series(rng.normal(0, 1, 10000))
+    # highly imbalanced: base rate ~ 1%
+    logit = -5.0 + 2.0 * score 
+    y = (rng.uniform(size=10000) < 1 / (1 + np.exp(-logit))).astype(int)
+    res = check_downstream(score, pd.Series(y))
+    assert res.status is Status.PASS
+    assert res.metrics["base_rate"] < 0.05
+    assert res.metrics["auc_oriented"] > 0.65
+
+
+def test_downstream_continuous_negative_polarity():
+    rng = np.random.default_rng(43)
+    score = pd.Series(rng.normal(0, 1, 2000))
+    y = -0.8 * score + rng.normal(0, 1, 2000)
+    res = check_downstream(score, y)
+    assert res.metrics["outcome_type"] == "continuous"
+    assert res.metrics["polarity"] == -1
+    assert res.status is Status.PASS

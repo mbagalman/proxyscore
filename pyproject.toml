@@ -10,7 +10,7 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
-    { name = "Michael", email = "michael@paradoxresolution.com" },
+    { name = "Michael", email = "michael@mbagalman.com" },
 ]
 requires-python = ">=3.10"
 dependencies = [
@@ -39,20 +39,27 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Topic :: Office/Business",
     "Topic :: Scientific/Engineering :: Information Analysis",
     "Typing :: Typed",
 ]
 
 [project.urls]
-Homepage = "https://github.com/paradoxresolution/proxyscore"
-Issues = "https://github.com/paradoxresolution/proxyscore/issues"
-Changelog = "https://github.com/paradoxresolution/proxyscore/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/mbagalman/proxyscore"
+Issues = "https://github.com/mbagalman/proxyscore/issues"
+Changelog = "https://github.com/mbagalman/proxyscore/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
     "ruff>=0.4",
+    "mypy>=1.0",
+    "pandas-stubs>=2.0",
 ]
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/proxyscore"]

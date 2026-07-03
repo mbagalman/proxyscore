@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import cast
 import numpy as np
 import pandas as pd
 
@@ -32,7 +33,7 @@ def indicator_summary(indicators: pd.DataFrame) -> pd.DataFrame:
         rest = Z.drop(columns=c).mean(axis=1)
         pair = pd.concat([Z[c], rest], axis=1).dropna()
         if X.shape[1] >= 2 and len(pair) >= 3 and pair.iloc[:, 0].std() > 0:
-            item_rest = float(pair.corr().iloc[0, 1])
+            item_rest = float(cast(float, pair.corr().iloc[0, 1]))
         else:
             item_rest = float("nan")
         rows.append(
@@ -98,7 +99,7 @@ def redundant_pairs(indicators: pd.DataFrame, threshold: float = 0.90) -> pd.Dat
     cols = list(corr.columns)
     for i, a in enumerate(cols):
         for b in cols[i + 1 :]:
-            r = corr.loc[a, b]
+            r = cast(float, corr.loc[a, b])
             if pd.notna(r) and abs(r) >= threshold:
                 rows.append({"indicator_a": a, "indicator_b": b, "corr": float(r)})
     return pd.DataFrame(rows, columns=["indicator_a", "indicator_b", "corr"])
@@ -185,7 +186,7 @@ def check_indicators(
         for c in X.columns:
             pair = pd.concat([X[c], score], axis=1).dropna()
             if len(pair) >= 3 and pair.iloc[:, 0].std() > 0 and pair.iloc[:, 1].std() > 0:
-                dom[c] = abs(float(pair.corr().iloc[0, 1]))
+                dom[c] = abs(float(cast(float, pair.corr().iloc[0, 1])))
         summary["score_corr_abs"] = pd.Series(dom)
         dominant = [c for c, v in dom.items() if v >= t.max_score_indicator_corr]
         if dominant:

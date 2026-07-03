@@ -12,6 +12,8 @@ the validation is circular (see :mod:`proxyscore.leakage`).
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import numpy as np
 import pandas as pd
 
@@ -33,7 +35,7 @@ from .config import Thresholds
 from .results import CheckResult, Status
 
 
-def _paired(score, outcome) -> pd.DataFrame:
+def _paired(score: Any, outcome: Any) -> pd.DataFrame:
     """Align and validate score and outcome, dropping incomplete rows."""
     s = as_series(score, "score")
     check_unique_index(s.index, "score")
@@ -44,7 +46,7 @@ def _paired(score, outcome) -> pd.DataFrame:
     return pd.concat([s, y], axis=1).dropna()
 
 
-def lift_table(score, outcome, n_bands: int = 10, ascending: bool = False) -> pd.DataFrame:
+def lift_table(score: Any, outcome: Any, n_bands: int = 10, ascending: bool = False) -> pd.DataFrame:
     """Outcome rate and lift per score band (band 1 = highest scores).
 
     Works for binary outcomes (rate = positive share; two-valued
@@ -81,7 +83,7 @@ def lift_table(score, outcome, n_bands: int = 10, ascending: bool = False) -> pd
     return g.reset_index()
 
 
-def downstream_validity(score, outcome) -> dict:
+def downstream_validity(score: Any, outcome: Any) -> dict[str, Any]:
     """Headline association metrics between score and outcome.
 
     Returns a dict with ``outcome_type`` ("binary" or "continuous"),
@@ -98,7 +100,7 @@ def downstream_validity(score, outcome) -> dict:
     y = to_binary(df["outcome"]) if binary else df["outcome"]
     rho = spearman(df["score"], y)
     polarity = -1 if (not np.isnan(rho) and rho < 0) else 1
-    out: dict = {
+    out: dict[str, Any] = {
         "n": int(len(df)),
         "spearman": rho,
         "polarity": polarity,
@@ -115,14 +117,14 @@ def downstream_validity(score, outcome) -> dict:
         out["outcome_type"] = "continuous"
         pair = pd.concat([df["score"], y], axis=1)
         out["pearson"] = (
-            float(pair.corr().iloc[0, 1]) if pair["score"].std() > 0 else float("nan")
+            float(cast(float, pair.corr().iloc[0, 1])) if pair["score"].std() > 0 else float("nan")
         )
     return out
 
 
 def check_downstream(
-    score,
-    outcome,
+    score: Any,
+    outcome: Any,
     thresholds: Thresholds | None = None,
     n_bands: int = 10,
 ) -> CheckResult:

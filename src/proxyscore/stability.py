@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import numpy as np
 import pandas as pd
 
@@ -17,7 +19,7 @@ from .config import Thresholds
 from .results import CheckResult, Status
 
 
-def psi(expected, actual, bins: int = 10) -> float:
+def psi(expected: Any, actual: Any, bins: int = 10) -> float:
     """Population Stability Index between two score samples.
 
     Bin edges are taken from the quantiles of ``expected`` (the baseline),
@@ -56,7 +58,7 @@ def psi(expected, actual, bins: int = 10) -> float:
     return float(np.sum((a_prop - e_prop) * np.log(a_prop / e_prop)))
 
 
-def _score_period_frame(score, period) -> pd.DataFrame:
+def _score_period_frame(score: Any, period: Any) -> pd.DataFrame:
     s = as_series(score, "score")
     check_unique_index(s.index, "score")
     validate_score(s)
@@ -64,7 +66,7 @@ def _score_period_frame(score, period) -> pd.DataFrame:
     return pd.concat([s, p], axis=1).dropna()
 
 
-def psi_over_time(score, period, baseline_period=None, bins: int = 10) -> pd.DataFrame:
+def psi_over_time(score: Any, period: Any, baseline_period: Any = None, bins: int = 10) -> pd.DataFrame:
     """PSI of each period's score distribution against a baseline period.
 
     ``baseline_period`` defaults to the earliest period (sorted order).
@@ -90,9 +92,9 @@ def psi_over_time(score, period, baseline_period=None, bins: int = 10) -> pd.Dat
 
 
 def check_stability(
-    score,
-    period,
-    baseline_period=None,
+    score: Any,
+    period: Any,
+    baseline_period: Any = None,
     bins: int = 10,
     thresholds: Thresholds | None = None,
 ) -> CheckResult:
@@ -153,7 +155,7 @@ def check_stability(
             notes,
         )
     worst_row = powered.loc[powered["psi"].idxmax()]
-    max_psi = float(worst_row["psi"])
+    max_psi = float(cast(float, worst_row["psi"]))
     if max_psi >= t.psi_unstable:
         status = Status.FAIL
         text = (

@@ -19,10 +19,17 @@ weights actually present, and returns NaN when observed weight falls below
 ``min_coverage`` (or when everything is missing). :class:`PCAScore` returns
 NaN for any incomplete row, because a partial projection is not on the same
 scale as a complete one.
+
+If a column is entirely missing (all-NaN) during `fit`, it will yield NaN
+scaling parameters, causing scores reliant on that column to become NaN.
+If all rows are incomplete (or all-NaN), `PCAScore.fit` will raise a
+`ValueError` as it requires at least 3 complete rows to fit.
 """
 
 from __future__ import annotations
 
+from typing import cast, Any
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
@@ -106,6 +113,7 @@ class CompositeScore:
             raise RuntimeError("call fit() before transform()")
         X = as_indicator_frame(indicators)[self.columns_]
         if self.scaling == "rank":
+            assert self.fit_values_ is not None
             scaled = pd.DataFrame(index=X.index)
             for c in self.columns_:
                 ref = self.fit_values_[c].dropna().sort_values().to_numpy()
@@ -118,6 +126,7 @@ class CompositeScore:
                     pct = np.searchsorted(ref, vals, side="right") / len(ref)
                 scaled[c] = np.where(np.isnan(vals), np.nan, pct)
         else:
+            assert self.center_ is not None and self.scale_ is not None
             scaled = (X - self.center_) / self.scale_
         w = pd.Series(
             {c: (self.weights or {}).get(c, 1.0) for c in self.columns_}, dtype=float
@@ -130,6 +139,32 @@ class CompositeScore:
 
     def fit_transform(self, indicators: pd.DataFrame) -> pd.Series:
         return self.fit(indicators).transform(indicators)
+
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
+        return {
+            "weights": self.weights,
+            "scaling": self.scaling,
+            "min_coverage": self.min_coverage,
+        }
+
+    def set_params(self, **params: Any) -> CompositeScore:
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self
+
+    def save(self, path: str | Path) -> None:
+        import pickle
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
+
+    @classmethod
+    def load(cls, path: str | Path) -> CompositeScore:
+        import pickle
+        with open(path, "rb") as f:
+            obj = pickle.load(f)
+        if not isinstance(obj, cls):
+            raise TypeError(f"Loaded object is not a {cls.__name__}")
+        return obj
 
 
 class PCAScore:
@@ -179,8 +214,32 @@ class PCAScore:
         if self.loadings_ is None:
             raise RuntimeError("call fit() before transform()")
         X = as_indicator_frame(indicators)[self.columns_]
+        assert self.mean_ is not None and self.std_ is not None
         Z = (X - self.mean_) / self.std_
-        return (Z * self.loadings_).sum(axis=1, skipna=False).rename("proxy_score")
+        Z_weighted = cast(pd.DataFrame, Z * self.loadings_)
+        return Z_weighted.sum(axis=1, skipna=False).rename("proxy_score")
 
     def fit_transform(self, indicators: pd.DataFrame) -> pd.Series:
         return self.fit(indicators).transform(indicators)
+
+    def get_params(self, deep: bool = True) -> dict[str, Any]:
+        return {}
+
+    def set_params(self, **params: Any) -> PCAScore:
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self
+
+    def save(self, path: str | Path) -> None:
+        import pickle
+        with open(path, "wb") as f:
+            pickle.dump(self, f)
+
+    @classmethod
+    def load(cls, path: str | Path) -> PCAScore:
+        import pickle
+        with open(path, "rb") as f:
+            obj = pickle.load(f)
+        if not isinstance(obj, cls):
+            raise TypeError(f"Loaded object is not a {cls.__name__}")
+        return obj

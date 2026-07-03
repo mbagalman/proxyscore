@@ -90,3 +90,28 @@ def test_leakage_clean_passes():
     y = rng.integers(0, 2, n)
     X = pd.DataFrame({"logins": rng.normal(0, 1, n), "nps": rng.normal(0, 1, n)})
     assert check_leakage(X, y).status is Status.PASS
+
+
+def test_check_segments_continuous_outcome():
+    rng = np.random.default_rng(42)
+    n = 1000
+    score = pd.Series(rng.normal(0, 1, n))
+    seg = pd.Series(rng.choice(["a", "b"], n))
+    y = pd.Series(1.5 * score + rng.normal(0, 1, n))
+    res = check_segments(score, seg, outcome=y)
+    assert res.status is Status.PASS
+    assert "validity_gap" in res.metrics
+
+
+def test_leakage_continuous_outcome():
+    rng = np.random.default_rng(43)
+    n = 1000
+    y = rng.normal(100, 15, n)
+    X = pd.DataFrame({
+        "honest": rng.normal(0, 1, n) + 0.02 * y,
+        "leaky": y + rng.normal(0, 0.5, n),
+    })
+    res = check_leakage(X, pd.Series(y))
+    assert res.status is Status.FAIL
+    assert "leaky" in res.summary
+    assert "honest" not in res.summary

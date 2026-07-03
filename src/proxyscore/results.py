@@ -57,7 +57,7 @@ class CheckResult:
     name: str
     status: Status
     summary: str
-    metrics: dict = field(default_factory=dict)
+    metrics: dict[str, float] = field(default_factory=dict)
     details: pd.DataFrame | None = None
     notes: list[str] = field(default_factory=list)
 

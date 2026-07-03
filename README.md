@@ -4,7 +4,7 @@
 
 *For when the business needs a number for something it cannot directly observe.*
 
-[![CI](https://github.com/paradoxresolution/proxyscore/actions/workflows/ci.yml/badge.svg)](https://github.com/paradoxresolution/proxyscore/actions/workflows/ci.yml)
+[![CI](https://github.com/mbagalman/proxyscore/actions/workflows/ci.yml/badge.svg)](https://github.com/mbagalman/proxyscore/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/proxyscore.svg)](https://pypi.org/project/proxyscore/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
