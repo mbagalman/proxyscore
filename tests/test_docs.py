@@ -30,6 +30,7 @@ PUBLIC_DOCS = [
     REPO / "docs" / "action-analysis.md",
     REPO / "docs" / "html-reports.md",
     REPO / "docs" / "score-comparison.md",
+    REPO / "docs" / "monitoring.md",
 ]
 IND = ["logins", "feature_depth", "support_tickets", "nps", "payment_delay_days"]
 

@@ -30,6 +30,8 @@ Priorities reflect operational risk: **P0** closes gaps that commonly prevent re
   escaped content, transparent table truncation, and attached action-analysis output.
 - Paired score-version comparison with coverage diagnostics, bootstrap downstream uncertainty,
   lift, stability, segments, polarity-aware rank migration, and changed action assignments.
+- Versioned monitoring baselines with fixed bins, fitted constructor state, schema preflight,
+  score and indicator drift, missingness, volume, matured outcomes, and operator artifacts.
 
 ## P0: required for operational use
 
@@ -151,7 +153,10 @@ entities and outcomes.
 
 **Dependencies:** BR-002 for action comparisons; BR-001 is recommended.
 
-### BR-005: Repeatable monitoring runs
+### BR-005: Repeatable monitoring runs - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. Focused monitoring and
+documentation tests pass as part of the full test suite.
 
 **Problem:** The library calculates period PSI inside one audit but cannot save a validated
 baseline, evaluate a new batch, retain compatible history, and expose an operator alert state.

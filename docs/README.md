@@ -24,6 +24,8 @@ Project documentation for `proxyscore`.
   with project metadata and optional action-analysis results.
 - **[Comparing score versions](score-comparison.md)** - compare paired downstream performance,
   uncertainty, rankings, migrations, segments, stability, and action assignments.
+- **[Repeatable batch monitoring](monitoring.md)** - persist fixed baseline state and evaluate
+  later batches with drift, missingness, volume, and matured-outcome checks.
 
 The top-level [`README.md`](../README.md) has the quick reference and the project's
 positioning; [`CHANGELOG.md`](../CHANGELOG.md) tracks releases.

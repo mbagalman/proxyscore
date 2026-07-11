@@ -17,6 +17,10 @@
   evaluation with entity coverage diagnostics, bootstrap downstream deltas, distribution and
   lift tables, polarity-aware rank and band migration, stability and segment comparisons, and
   changed action assignments at supplied policies.
+- Added versioned `MonitoringBaseline` artifacts and `monitor_batch` runs with fixed score and
+  indicator bins, fitted `CompositeScore`/`PCAScore` state, schema preflight, drift, missingness,
+  volume and matured-outcome checks, stable JSON/Markdown/HTML output, alert states, and scheduler
+  exit codes.
 
 ## 0.1.0 (2026-06-10)
 

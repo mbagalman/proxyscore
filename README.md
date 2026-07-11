@@ -104,6 +104,32 @@ print(comparison.migration)
 See [Comparing score versions](docs/score-comparison.md) for paired uncertainty, coverage,
 stability, segment, rank-migration, and changed-action analysis.
 
+Persist an approved baseline and monitor later batches without refitting:
+
+```python
+from proxyscore import create_monitoring_baseline, monitor_batch
+
+baseline = create_monitoring_baseline(
+    reference[indicator_columns],
+    score_id="customer-health",
+    score_version="2026.1",
+    score=reference["health_score"],
+    outcome=reference["churned_next_quarter"],
+)
+baseline.save("customer-health-baseline.json")
+
+result = monitor_batch(
+    baseline,
+    current[indicator_columns],
+    score=current["health_score"],
+    batch_id="2026-07",
+)
+print(result.alert_state, result.exit_code)
+```
+
+See [Repeatable batch monitoring](docs/monitoring.md) for fitted-constructor artifacts, fixed
+drift bins, matured outcomes, alert states, exit codes, and monthly result retention.
+
 No data handy? There's a synthetic example with a known latent construct, a plantable leak,
 and plantable drift:
 

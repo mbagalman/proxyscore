@@ -33,6 +33,16 @@ from .indicators import (
     vif,
 )
 from .leakage import check_leakage, leakage_scan
+from .monitoring import (
+    ArtifactVersionError,
+    MonitoringBaseline,
+    MonitoringCheck,
+    MonitoringLimits,
+    MonitoringResult,
+    MonitorStatus,
+    create_monitoring_baseline,
+    monitor_batch,
+)
 from .results import CheckResult, Status
 from .stability import check_stability, psi, psi_over_time
 from .validation import check_downstream, downstream_validity, lift_table
@@ -45,10 +55,16 @@ __all__ = [
     "AlignmentResult",
     "ActionAnalysis",
     "ActionRecommendation",
+    "ArtifactVersionError",
     "CheckResult",
     "CompositeScore",
     "ComparisonCoverage",
     "PCAScore",
+    "MonitorStatus",
+    "MonitoringBaseline",
+    "MonitoringCheck",
+    "MonitoringLimits",
+    "MonitoringResult",
     "ProxyAudit",
     "ScoreComparison",
     "Status",
@@ -62,11 +78,13 @@ __all__ = [
     "check_segments",
     "check_stability",
     "compare_scores",
+    "create_monitoring_baseline",
     "cronbach_alpha",
     "downstream_validity",
     "indicator_summary",
     "leakage_scan",
     "lift_table",
+    "monitor_batch",
     "psi",
     "psi_over_time",
     "redundant_pairs",
