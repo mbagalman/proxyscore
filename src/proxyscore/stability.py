@@ -66,7 +66,12 @@ def _score_period_frame(score: Any, period: Any) -> pd.DataFrame:
     return pd.concat([s, p], axis=1).dropna()
 
 
-def psi_over_time(score: Any, period: Any, baseline_period: Any = None, bins: int = 10) -> pd.DataFrame:
+def psi_over_time(
+    score: Any,
+    period: Any,
+    baseline_period: Any = None,
+    bins: int = 10,
+) -> pd.DataFrame:
     """PSI of each period's score distribution against a baseline period.
 
     ``baseline_period`` defaults to the earliest period (sorted order).

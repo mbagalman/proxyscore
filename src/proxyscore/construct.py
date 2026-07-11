@@ -28,8 +28,9 @@ If all rows are incomplete (or all-NaN), `PCAScore.fit` will raise a
 
 from __future__ import annotations
 
-from typing import cast, Any
 from pathlib import Path
+from typing import Any, cast
+
 import numpy as np
 import pandas as pd
 

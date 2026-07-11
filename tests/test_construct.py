@@ -82,7 +82,7 @@ def test_composite_get_set_params():
     params = cs.get_params()
     assert params["weights"] == {"a": 2.0}
     assert params["min_coverage"] == 0.8
-    
+
     cs2 = CompositeScore().set_params(**params)
     assert cs2.weights == {"a": 2.0}
     assert cs2.min_coverage == 0.8
@@ -92,7 +92,7 @@ def test_composite_save_load(tmp_path, X):
     cs = CompositeScore().fit(X)
     path = tmp_path / "model.pkl"
     cs.save(path)
-    
+
     cs2 = CompositeScore.load(path)
     assert cs2.columns_ == cs.columns_
     assert (cs2.center_ == cs.center_).all()
@@ -110,7 +110,7 @@ def test_pca_save_load(tmp_path, X):
     ps = PCAScore().fit(X)
     path = tmp_path / "model.pkl"
     ps.save(path)
-    
+
     ps2 = PCAScore.load(path)
     assert ps2.columns_ == ps.columns_
     assert (ps2.mean_ == ps.mean_).all()

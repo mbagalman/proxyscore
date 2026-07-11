@@ -171,7 +171,13 @@ class Thresholds:
             raise ValueError(
                 f"max_segment_corr_gap must be in (0, 2], got {self.max_segment_corr_gap}"
             )
-        for name in ("min_audit_rows", "min_segment_size", "min_class_count", "min_leak_rows", "min_period_rows"):
+        for name in (
+            "min_audit_rows",
+            "min_segment_size",
+            "min_class_count",
+            "min_leak_rows",
+            "min_period_rows",
+        ):
             ensure_count(getattr(self, name), 1, name)
         if self.max_audit_rows is not None:
             ensure_count(self.max_audit_rows, self.min_audit_rows, "max_audit_rows")

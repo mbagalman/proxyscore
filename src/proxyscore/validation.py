@@ -46,7 +46,12 @@ def _paired(score: Any, outcome: Any) -> pd.DataFrame:
     return pd.concat([s, y], axis=1).dropna()
 
 
-def lift_table(score: Any, outcome: Any, n_bands: int = 10, ascending: bool = False) -> pd.DataFrame:
+def lift_table(
+    score: Any,
+    outcome: Any,
+    n_bands: int = 10,
+    ascending: bool = False,
+) -> pd.DataFrame:
     """Outcome rate and lift per score band (band 1 = highest scores).
 
     Works for binary outcomes (rate = positive share; two-valued

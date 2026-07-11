@@ -110,7 +110,7 @@ def test_downstream_highly_imbalanced_binary():
     rng = np.random.default_rng(42)
     score = pd.Series(rng.normal(0, 1, 10000))
     # highly imbalanced: base rate ~ 1%
-    logit = -5.0 + 2.0 * score 
+    logit = -5.0 + 2.0 * score
     y = (rng.uniform(size=10000) < 1 / (1 + np.exp(-logit))).astype(int)
     res = check_downstream(score, pd.Series(y))
     assert res.status is Status.PASS

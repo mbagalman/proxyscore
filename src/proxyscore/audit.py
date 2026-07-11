@@ -150,11 +150,11 @@ class ProxyAudit:
         thresholds: Thresholds | None = None,
     ):
         self.thresholds = thresholds or Thresholds()
-        
+
         self.indicators = as_indicator_frame(indicators)
         check_unique_index(self.indicators.index, "indicators")
         idx = self.indicators.index
-        
+
         self.score_provided = score is not None
         if score is None:
             self.score = CompositeScore().fit_transform(self.indicators)
@@ -166,9 +166,13 @@ class ProxyAudit:
         self.period = aligned_series(period, "period", idx) if period is not None else None
 
         n_initial = len(self.indicators)
-        if self.thresholds.max_audit_rows is not None and n_initial > self.thresholds.max_audit_rows:
+        max_audit_rows = self.thresholds.max_audit_rows
+        self._audit_rows: int | None = None
+        self._downsampled_from: int | None
+        if max_audit_rows is not None and n_initial > max_audit_rows:
             self._downsampled_from = n_initial
-            sample_idx = self.indicators.sample(n=self.thresholds.max_audit_rows, random_state=42).index
+            self._audit_rows = max_audit_rows
+            sample_idx = self.indicators.sample(n=max_audit_rows, random_state=42).index
             self.indicators = self.indicators.loc[sample_idx]
             self.score = self.score.loc[sample_idx]
             if self.outcome is not None:
@@ -187,13 +191,18 @@ class ProxyAudit:
 
         n_rows = len(self.indicators)
         if self._downsampled_from is not None:
+            assert self._audit_rows is not None
             results.append(
                 CheckResult(
                     "sample_size",
                     Status.PASS,
-                    f"Audit randomly downsampled {self._downsampled_from} rows to {t.max_audit_rows} "
-                    "for performance. This preserves statistical precision while saving memory.",
-                    metrics={"original_rows": self._downsampled_from, "audit_rows": t.max_audit_rows},
+                    f"Audit randomly downsampled {self._downsampled_from} rows "
+                    f"to {self._audit_rows} for performance. This preserves "
+                    "statistical precision while saving memory.",
+                    metrics={
+                        "original_rows": self._downsampled_from,
+                        "audit_rows": self._audit_rows,
+                    },
                 )
             )
         elif n_rows < t.min_audit_rows:
@@ -258,14 +267,14 @@ class ProxyAudit:
 
     def _find_unassessable_checks(self, results: list[CheckResult]) -> list[str]:
         """Find checks that were skipped despite having their required inputs supplied.
-        
-        A SKIP on a check whose input was never supplied (e.g. no segments provided) 
-        means "not applicable". However, a SKIP *despite* a supplied input means evidence 
-        was insufficient inside the claimed validation scope (e.g. segments were provided, 
-        but they were all too small to evaluate). This must not be hidden behind a 
+
+        A SKIP on a check whose input was never supplied (e.g. no segments provided)
+        means "not applicable". However, a SKIP *despite* a supplied input means evidence
+        was insufficient inside the claimed validation scope (e.g. segments were provided,
+        but they were all too small to evaluate). This must not be hidden behind a
         decision-grade verdict.
 
-        'downstream' is excluded here because a skipped downstream check is a fatal 
+        'downstream' is excluded here because a skipped downstream check is a fatal
         error that downgrades the verdict to NOT_VALIDATED immediately in `_grade`.
         """
         supplied = {
