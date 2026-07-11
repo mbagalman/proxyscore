@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Added `align_delayed_outcomes`, `AlignmentResult`, and `AlignmentDiagnostics` for strict
+  point-in-time alignment of score snapshots with delayed outcomes, including repeated entities,
+  explicit outcome windows, censoring, duplicate-event policies, timezone handling, diagnostics,
+  and direct `ProxyAudit` input construction.
+- Added `analyze_actions`, `ActionAnalysis`, and `ActionRecommendation` for operating-cutoff,
+  percentile, top-N capacity, and candidate-grid evaluation, including classification metrics,
+  continuous outcome bands, segment safeguards, explicit business-value assumptions, and
+  opt-in constrained candidate recommendations.
+
 ## 0.1.0 (2026-06-10)
 
 Initial release.

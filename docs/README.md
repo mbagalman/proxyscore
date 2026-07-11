@@ -13,6 +13,14 @@ Project documentation for `proxyscore`.
   Goodhart's Law, decision-grade thinking), with each concept mapped to what the library does,
   what's on the roadmap, and what belongs to a specialized tool.
 
+- **[Business-readiness backlog](business-readiness-backlog.md)** - prioritized,
+  implementation-ready tickets for taking the library from focused score validation to
+  repeatable business operation and governance.
+- **[Time-window alignment](time-window-alignment.md)** - build point-in-time-correct audit
+  inputs from score snapshots and delayed event or outcome tables.
+- **[Operating-threshold and action analysis](action-analysis.md)** - evaluate concrete score
+  cutoffs, capacities, error rates, segment behavior, and optional business value.
+
 The top-level [`README.md`](../README.md) has the quick reference and the project's
 positioning; [`CHANGELOG.md`](../CHANGELOG.md) tracks releases.
 

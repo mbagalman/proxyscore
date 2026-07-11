@@ -18,6 +18,8 @@ Quick start::
     print(report.to_markdown())  # full audit report
 """
 
+from .actions import ActionAnalysis, ActionRecommendation, analyze_actions
+from .alignment import AlignmentDiagnostics, AlignmentResult, align_delayed_outcomes
 from .audit import AuditReport, ProxyAudit, Verdict
 from .bias import check_segments, segment_summary
 from .config import Thresholds
@@ -38,6 +40,10 @@ __version__ = "0.1.0"
 
 __all__ = [
     "AuditReport",
+    "AlignmentDiagnostics",
+    "AlignmentResult",
+    "ActionAnalysis",
+    "ActionRecommendation",
     "CheckResult",
     "CompositeScore",
     "PCAScore",
@@ -45,6 +51,8 @@ __all__ = [
     "Status",
     "Thresholds",
     "Verdict",
+    "align_delayed_outcomes",
+    "analyze_actions",
     "check_downstream",
     "check_indicators",
     "check_leakage",

@@ -66,6 +66,24 @@ report["downstream"].metrics    # {'auc': ..., 'auc_oriented': ..., 'spearman': 
 report["segments"].details      # per-segment DataFrame
 ```
 
+Evaluate concrete action cutoffs only after the outcome is aligned and the score is audited:
+
+```python
+from proxyscore import analyze_actions
+
+actions = analyze_actions(
+    df["health_score"],
+    df["churned_next_quarter"],
+    top_n=[50, 100, 250],
+    false_positive_cost=40,
+    action_cost=15,
+)
+print(actions.table)
+```
+
+See [Operating-threshold and action analysis](docs/action-analysis.md) for cutoff, percentile,
+capacity, segment, economic-value, and explicit recommendation workflows.
+
 No data handy? There's a synthetic example with a known latent construct, a plantable leak,
 and plantable drift:
 
@@ -156,7 +174,7 @@ tool does — see **[A practitioner's guide to proxy metrics](docs/proxy-metrics
 - Convergent/discriminant validity for multi-construct setups (AVE, HTMT)
 - Measurement invariance testing across segments
 - Eigenvector/loading drift for PCA-based scores
-- Time-lagged outcome alignment helpers and survival-style validation
+- Survival-style validation for right-censored time-to-event outcomes
 - HTML report export
 
 Contributions and issue reports are welcome.

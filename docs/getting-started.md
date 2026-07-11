@@ -109,6 +109,10 @@ license you to do*:
 > not "cleared to automate." The last mile — threshold tuning, a prospective holdout, monitoring,
 > and applicable governance — is yours.
 
+Use [operating-threshold and action analysis](action-analysis.md) to evaluate precision, recall,
+workload, false-positive cost, and candidate cutoffs. That supplements the audit; prospective
+validation, monitoring, and applicable governance remain necessary.
+
 ### Why is this audit `directional` and not `decision_grade`?
 
 The downstream check passed strongly, nothing failed — but the **indicators** check raised a

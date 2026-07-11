@@ -417,6 +417,10 @@ of decision a score has *earned* the right to drive.
 
 ---
 
+Operating-threshold evidence can be evaluated separately with `analyze_actions`; see the
+[action-analysis guide](action-analysis.md). It supplements rather than changes the audit
+verdict.
+
 ## 8. References & further reading
 
 The methods above draw on three literatures. These are the load-bearing sources behind the

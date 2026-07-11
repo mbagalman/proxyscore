@@ -26,6 +26,8 @@ PUBLIC_DOCS = [
     REPO / "docs" / "README.md",
     REPO / "docs" / "getting-started.md",
     REPO / "docs" / "proxy-metrics-guide.md",
+    REPO / "docs" / "time-window-alignment.md",
+    REPO / "docs" / "action-analysis.md",
 ]
 IND = ["logins", "feature_depth", "support_tickets", "nps", "payment_delay_days"]
 
