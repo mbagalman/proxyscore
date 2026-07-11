@@ -17,7 +17,11 @@ dependencies = [
     "numpy>=1.24",
     "pandas>=2.0",
     "scipy>=1.10",
+    "tomli>=2.0; python_version < '3.11'",
 ]
+
+[project.scripts]
+proxyscore = "proxyscore.cli:cli"
 keywords = [
     "proxy-score",
     "latent-construct",
@@ -50,6 +54,9 @@ Issues = "https://github.com/mbagalman/proxyscore/issues"
 Changelog = "https://github.com/mbagalman/proxyscore/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
+parquet = [
+    "pyarrow>=14.0",
+]
 dev = [
     "pytest>=7.0",
     "ruff>=0.4",

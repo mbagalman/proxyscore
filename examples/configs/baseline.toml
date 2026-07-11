@@ -1,0 +1,22 @@
+config_version = 1
+
+[baseline]
+input = "approved-reference.csv"
+indicators = ["usage", "depth", "tickets"]
+score = "health_score"
+outcome = "churned_next_quarter"
+score_id = "customer-health"
+score_version = "2026.1"
+artifact = "baselines/customer-health-2026.1.json"
+
+[thresholds]
+psi_stable = 0.08
+psi_unstable = 0.20
+
+[monitoring_limits]
+missing_rate_warning_delta = 0.03
+performance_warning_drop = 0.03
+performance_failure_drop = 0.08
+
+[metadata]
+owner = "Revenue Analytics"

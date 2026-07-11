@@ -26,6 +26,8 @@ Project documentation for `proxyscore`.
   uncertainty, rankings, migrations, segments, stability, and action assignments.
 - **[Repeatable batch monitoring](monitoring.md)** - persist fixed baseline state and evaluate
   later batches with drift, missingness, volume, and matured-outcome checks.
+- **[Command-line interface](cli.md)** - run audit, comparison, baseline, and monitoring
+  workflows from CSV or Parquet with versioned TOML configuration.
 
 The top-level [`README.md`](../README.md) has the quick reference and the project's
 positioning; [`CHANGELOG.md`](../CHANGELOG.md) tracks releases.

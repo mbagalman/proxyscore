@@ -21,6 +21,9 @@
   indicator bins, fitted `CompositeScore`/`PCAScore` state, schema preflight, drift, missingness,
   volume and matured-outcome checks, stable JSON/Markdown/HTML output, alert states, and scheduler
   exit codes.
+- Added the `proxyscore` command with `audit`, `compare`, `baseline`, and `monitor` workflows,
+  versioned TOML configuration, CSV and optional Parquet input, explicit column mappings,
+  threshold overrides, JSON/Markdown/HTML output, privacy-safe errors, and stable exit codes.
 
 ## 0.1.0 (2026-06-10)
 

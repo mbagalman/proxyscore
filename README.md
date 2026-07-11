@@ -45,6 +45,10 @@ pip install proxyscore
 
 Requires Python ≥ 3.10. Depends only on `numpy`, `pandas`, and `scipy`.
 
+The installed `proxyscore` command exposes `audit`, `compare`, `baseline`, and `monitor`
+workflows. See the [CLI guide](docs/cli.md). Install `proxyscore[parquet]` when reading Parquet
+files from the command line.
+
 ## Quick start
 
 ```python

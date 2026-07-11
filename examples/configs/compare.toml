@@ -1,0 +1,15 @@
+config_version = 1
+
+[compare]
+input = "score-versions.parquet"
+baseline_score = "health_score_v1"
+candidate_score = "health_score_v2"
+outcome = "churned_next_quarter"
+segments = "plan_tier"
+period = "snapshot_month"
+baseline_name = "v1"
+candidate_name = "v2"
+n_bootstrap = 1000
+action_top_n = [50, 100, 250]
+json_output = "reports/comparison.json"
+html_output = "reports/comparison.html"

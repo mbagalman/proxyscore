@@ -32,6 +32,8 @@ Priorities reflect operational risk: **P0** closes gaps that commonly prevent re
   lift, stability, segments, polarity-aware rank migration, and changed action assignments.
 - Versioned monitoring baselines with fixed bins, fitted constructor state, schema preflight,
   score and indicator drift, missingness, volume, matured outcomes, and operator artifacts.
+- Shell-friendly `proxyscore` CLI commands for audits, score comparisons, monitoring baselines,
+  and batch monitoring, with TOML configuration, output artifacts, and stable exit codes.
 
 ## P0: required for operational use
 
@@ -184,7 +186,10 @@ structured monitoring results.
 
 ## P1: adoption and governance
 
-### BR-006: Command-line interface
+### BR-006: Command-line interface - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. The focused CLI tests,
+Ruff, mypy, and the full test suite pass.
 
 **Problem:** Requiring custom Python raises adoption cost and makes scheduled runs less
 standardized.

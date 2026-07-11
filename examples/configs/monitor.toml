@@ -1,0 +1,12 @@
+config_version = 1
+
+[monitor]
+input = "monthly/2026-07.csv"
+artifact = "baselines/customer-health-2026.1.json"
+score = "health_score"
+outcome = "churned_next_quarter"
+score_version = "2026.1"
+batch_id = "2026-07"
+json_output = "monitoring/2026-07.json"
+markdown_output = "monitoring/2026-07.md"
+html_output = "monitoring/2026-07.html"

@@ -1,0 +1,20 @@
+config_version = 1
+
+[audit]
+input = "customer-health.csv"
+indicators = ["logins", "feature_depth", "support_tickets", "nps"]
+score = "health_score"
+outcome = "churned_next_quarter"
+segments = "plan_tier"
+period = "snapshot_month"
+json_output = "reports/audit.json"
+markdown_output = "reports/audit.md"
+html_output = "reports/audit.html"
+
+[thresholds]
+min_auc_strong = 0.70
+psi_unstable = 0.20
+
+[metadata]
+organization = "Example Company"
+project = "Customer health review"
