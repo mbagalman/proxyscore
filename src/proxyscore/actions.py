@@ -54,6 +54,7 @@ class ActionAnalysis:
     segment_table: pd.DataFrame | None = None
     assumptions: dict[str, float] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
+    assignments: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     def recommend(
         self,
@@ -423,7 +424,9 @@ def analyze_actions(
 
     rows: list[dict[str, Any]] = []
     segment_rows: list[dict[str, Any]] = []
+    assignments: dict[str, pd.Series] = {}
     for policy in policies:
+        assignments[policy.policy_id] = policy.selected.astype(bool)
         metrics = (
             _binary_metrics(policy.selected, analyzed_outcome, assumptions)
             if binary
@@ -498,4 +501,5 @@ def analyze_actions(
         segment_table=pd.DataFrame(segment_rows) if segments is not None else None,
         assumptions=assumptions,
         notes=notes,
+        assignments=pd.DataFrame(assignments, index=frame.index),
     )

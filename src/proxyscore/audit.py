@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 
@@ -17,6 +20,9 @@ from .leakage import check_leakage
 from .results import CheckResult, Status
 from .stability import check_stability
 from .validation import check_downstream
+
+if TYPE_CHECKING:
+    from .actions import ActionAnalysis
 
 
 class Verdict(str, Enum):
@@ -44,6 +50,8 @@ class AuditReport:
     verdict: Verdict
     verdict_reason: str
     results: list[CheckResult] = field(default_factory=list)
+    scope: dict[str, Any] = field(default_factory=dict)
+    action_analysis: ActionAnalysis | None = None
 
     def __getitem__(self, name: str) -> CheckResult:
         for r in self.results:
@@ -54,10 +62,11 @@ class AuditReport:
     def summary(self) -> pd.DataFrame:
         """One row per check: name, status, summary text."""
         return pd.DataFrame(
-            [
+            (
                 {"check": r.name, "status": r.status.value, "summary": r.summary}
                 for r in self.results
-            ]
+            ),
+            columns=["check", "status", "summary"],
         )
 
     def to_markdown(self) -> str:
@@ -93,6 +102,55 @@ class AuditReport:
                 lines += ["", f"> {n}"]
         lines.append("")
         return "\n".join(lines)
+
+    def attach_action_analysis(self, analysis: ActionAnalysis) -> AuditReport:
+        """Attach BR-002 output for inclusion in rich report formats."""
+        from .actions import ActionAnalysis
+
+        if not isinstance(analysis, ActionAnalysis):
+            raise TypeError("analysis must be an ActionAnalysis")
+        self.action_analysis = analysis
+        return self
+
+    def to_html(
+        self,
+        *,
+        title: str = "Proxy score audit",
+        metadata: Mapping[str, Any] | None = None,
+        max_detail_rows: int | None = 100,
+        generated_at: datetime | None = None,
+    ) -> str:
+        """Return a self-contained, accessible HTML audit report."""
+        from .html_report import render_audit_html
+
+        return render_audit_html(
+            self,
+            title=title,
+            metadata=metadata,
+            max_detail_rows=max_detail_rows,
+            generated_at=generated_at,
+        )
+
+    def write_html(
+        self,
+        path: str | Path,
+        *,
+        title: str = "Proxy score audit",
+        metadata: Mapping[str, Any] | None = None,
+        max_detail_rows: int | None = 100,
+        generated_at: datetime | None = None,
+    ) -> Path:
+        """Write a self-contained HTML audit report and return its path."""
+        from .html_report import write_audit_html
+
+        return write_audit_html(
+            self,
+            path,
+            title=title,
+            metadata=metadata,
+            max_detail_rows=max_detail_rows,
+            generated_at=generated_at,
+        )
 
     def __repr__(self) -> str:  # pragma: no cover - cosmetic
         checks = ", ".join(f"{r.name}={r.status.value}" for r in self.results)
@@ -263,7 +321,17 @@ class ProxyAudit:
             )
 
         verdict, reason = self._grade(results)
-        return AuditReport(verdict, reason, results)
+        scope = {
+            "original_rows": self._downsampled_from or n_rows,
+            "audit_rows": n_rows,
+            "indicator_count": self.indicators.shape[1],
+            "indicator_columns": list(self.indicators.columns),
+            "score_supplied": self.score_provided,
+            "outcome_supplied": self.outcome is not None,
+            "segments_supplied": self.segments is not None,
+            "period_supplied": self.period is not None,
+        }
+        return AuditReport(verdict, reason, results, scope=scope)
 
     def _find_unassessable_checks(self, results: list[CheckResult]) -> list[str]:
         """Find checks that were skipped despite having their required inputs supplied.

@@ -26,6 +26,10 @@ Priorities reflect operational risk: **P0** closes gaps that commonly prevent re
   direct `ProxyAudit` inputs.
 - Operating-threshold and action analysis for cutoffs, population percentiles, exact capacities,
   candidate grids, segment performance, and explicit binary-outcome economics.
+- Self-contained HTML audit reports with input scope, project metadata, accessible status text,
+  escaped content, transparent table truncation, and attached action-analysis output.
+- Paired score-version comparison with coverage diagnostics, bootstrap downstream uncertainty,
+  lift, stability, segments, polarity-aware rank migration, and changed action assignments.
 
 ## P0: required for operational use
 
@@ -92,7 +96,10 @@ continuous outcomes. Support user-supplied cutoffs and candidate-cutoff explorat
 
 **Dependencies:** BR-001 is recommended so evaluation windows are trustworthy.
 
-### BR-003: Standalone HTML audit report
+### BR-003: Standalone HTML audit report - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. Focused HTML-report and
+documentation tests pass as part of the full test suite.
 
 **Problem:** Markdown and DataFrames work for analysts, but business reviewers need a portable
 report that opens without Python and can be retained as review evidence.
@@ -116,7 +123,10 @@ generate a self-contained, accessible report.
 
 **Non-goal:** A hosted dashboard or PDF rendering service.
 
-### BR-004: Score-version comparison
+### BR-004: Score-version comparison - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. Focused comparison,
+action-assignment, and documentation tests pass as part of the full test suite.
 
 **Problem:** Businesses rarely assess one immutable score. They need to show whether a proposed
 version is better, how population behavior changed, and which records receive different actions.

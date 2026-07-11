@@ -22,6 +22,7 @@ from .actions import ActionAnalysis, ActionRecommendation, analyze_actions
 from .alignment import AlignmentDiagnostics, AlignmentResult, align_delayed_outcomes
 from .audit import AuditReport, ProxyAudit, Verdict
 from .bias import check_segments, segment_summary
+from .comparison import ComparisonCoverage, ScoreComparison, compare_scores
 from .config import Thresholds
 from .construct import CompositeScore, PCAScore
 from .indicators import (
@@ -46,8 +47,10 @@ __all__ = [
     "ActionRecommendation",
     "CheckResult",
     "CompositeScore",
+    "ComparisonCoverage",
     "PCAScore",
     "ProxyAudit",
+    "ScoreComparison",
     "Status",
     "Thresholds",
     "Verdict",
@@ -58,6 +61,7 @@ __all__ = [
     "check_leakage",
     "check_segments",
     "check_stability",
+    "compare_scores",
     "cronbach_alpha",
     "downstream_validity",
     "indicator_summary",

@@ -104,6 +104,8 @@ def test_multiple_policy_modes_can_be_evaluated_together():
     )
     assert set(result.table["strategy"]) == {"cutoff", "percentile", "top_n", "grid"}
     assert result.table["policy_id"].is_unique
+    assert list(result.assignments.columns) == result.table["policy_id"].tolist()
+    assert result.assignments.dtypes.eq(bool).all()
 
 
 def test_business_value_and_break_even_metrics():

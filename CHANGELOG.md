@@ -10,6 +10,13 @@
   percentile, top-N capacity, and candidate-grid evaluation, including classification metrics,
   continuous outcome bands, segment safeguards, explicit business-value assumptions, and
   opt-in constrained candidate recommendations.
+- Added self-contained `AuditReport.to_html()` and `write_html()` exports with input scope,
+  generation and project metadata, accessible status and table markup, safe escaping, transparent
+  detail-table truncation, and optional attached action-analysis results.
+- Added `compare_scores`, `ScoreComparison`, and `ComparisonCoverage` for paired score-version
+  evaluation with entity coverage diagnostics, bootstrap downstream deltas, distribution and
+  lift tables, polarity-aware rank and band migration, stability and segment comparisons, and
+  changed action assignments at supplied policies.
 
 ## 0.1.0 (2026-06-10)
 

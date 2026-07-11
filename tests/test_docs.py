@@ -28,6 +28,8 @@ PUBLIC_DOCS = [
     REPO / "docs" / "proxy-metrics-guide.md",
     REPO / "docs" / "time-window-alignment.md",
     REPO / "docs" / "action-analysis.md",
+    REPO / "docs" / "html-reports.md",
+    REPO / "docs" / "score-comparison.md",
 ]
 IND = ["logins", "feature_depth", "support_tickets", "nps", "payment_delay_days"]
 

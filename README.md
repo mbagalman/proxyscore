@@ -61,6 +61,7 @@ report = ProxyAudit(
 print(report.verdict)        # Verdict.DECISION_GRADE / DIRECTIONAL / NOT_VALIDATED
 print(report.summary())      # one row per check: status + plain-language summary
 print(report.to_markdown())  # full audit report, ready for a PR or wiki page
+report.write_html("proxy-audit.html")  # portable report for business review
 
 report["downstream"].metrics    # {'auc': ..., 'auc_oriented': ..., 'spearman': ..., ...}
 report["segments"].details      # per-segment DataFrame
@@ -83,6 +84,25 @@ print(actions.table)
 
 See [Operating-threshold and action analysis](docs/action-analysis.md) for cutoff, percentile,
 capacity, segment, economic-value, and explicit recommendation workflows.
+
+Compare a proposed score version on the same entities and delayed outcomes:
+
+```python
+from proxyscore import compare_scores
+
+comparison = compare_scores(
+    df["health_score_v1"],
+    df["health_score_v2"],
+    df["churned_next_quarter"],
+    segments=df["plan_tier"],
+    action_top_n=[50, 100, 250],
+)
+print(comparison.performance)
+print(comparison.migration)
+```
+
+See [Comparing score versions](docs/score-comparison.md) for paired uncertainty, coverage,
+stability, segment, rank-migration, and changed-action analysis.
 
 No data handy? There's a synthetic example with a known latent construct, a plantable leak,
 and plantable drift:
@@ -175,7 +195,6 @@ tool does — see **[A practitioner's guide to proxy metrics](docs/proxy-metrics
 - Measurement invariance testing across segments
 - Eigenvector/loading drift for PCA-based scores
 - Survival-style validation for right-censored time-to-event outcomes
-- HTML report export
 
 Contributions and issue reports are welcome.
 
