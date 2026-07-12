@@ -40,6 +40,8 @@ Priorities reflect operational risk: **P0** closes gaps that commonly prevent re
 - Governance and reproducibility manifests with score ownership, permitted-use context,
   dataset/code revisions, row counts, checks, thresholds, strict mode, redaction, and
   deterministic configuration fingerprints.
+- Named multi-outcome validation with independent maturity samples, required/supporting policy,
+  polarity contradiction detection, non-averaging verdicts, reports, and score comparisons.
 
 ## P0: required for operational use
 
@@ -266,7 +268,11 @@ monitoring baseline/result artifacts now embed versioned manifests. Added schema
 focused tests for round trips, schema rejection, redaction, warnings, fingerprints, audit reports,
 and monitoring artifacts.
 
-### BR-009: Multi-outcome validation
+### BR-009: Multi-outcome validation - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. Focused multi-outcome tests
+cover mixed types, independent missingness and maturity samples, conflicting polarity, a failed
+required outcome, BR-001 alignment handoff, report tables/Markdown, and score comparisons.
 
 **Problem:** A construct may need to predict churn, expansion, escalation, and payment risk.
 Separate audits make conflicting evidence and sample differences hard to see.
@@ -285,6 +291,11 @@ Separate audits make conflicting evidence and sample differences hard to see.
   required outcome.
 
 **Dependencies:** BR-001 for per-outcome alignment.
+
+**Completion notes:** Added `OutcomeSpec`, `validate_outcomes`, and structured per-outcome results
+with explicit type, polarity, window, importance, maturity, sample diagnostics, downstream checks,
+and leakage checks. Added a documented non-averaging verdict policy, alignment-aware construction,
+namespaced reporting tables, Markdown output, and `compare_outcomes` integration.
 
 ### BR-010: Business recipes and data-adapter protocol
 

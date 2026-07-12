@@ -59,6 +59,17 @@ from .monitoring import (
     create_monitoring_baseline,
     monitor_batch,
 )
+from .multi_outcome import (
+    MultiOutcomeComparison,
+    MultiOutcomeReport,
+    OutcomeImportance,
+    OutcomePolarity,
+    OutcomeSpec,
+    OutcomeType,
+    OutcomeValidation,
+    compare_outcomes,
+    validate_outcomes,
+)
 from .results import CheckResult, Status
 from .stability import check_stability, psi, psi_over_time
 from .validation import check_downstream, downstream_validity, lift_table
@@ -87,6 +98,13 @@ __all__ = [
     "MonitoringCheck",
     "MonitoringLimits",
     "MonitoringResult",
+    "MultiOutcomeComparison",
+    "MultiOutcomeReport",
+    "OutcomeImportance",
+    "OutcomePolarity",
+    "OutcomeSpec",
+    "OutcomeType",
+    "OutcomeValidation",
     "ProxyAudit",
     "ScoreComparison",
     "Status",
@@ -101,6 +119,7 @@ __all__ = [
     "check_segments",
     "check_stability",
     "compare_scores",
+    "compare_outcomes",
     "configuration_fingerprint",
     "create_monitoring_baseline",
     "create_governance_manifest",
@@ -118,4 +137,5 @@ __all__ = [
     "redundant_pairs",
     "segment_summary",
     "vif",
+    "validate_outcomes",
 ]

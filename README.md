@@ -108,6 +108,33 @@ print(comparison.migration)
 See [Comparing score versions](docs/score-comparison.md) for paired uncertainty, coverage,
 stability, segment, rank-migration, and changed-action analysis.
 
+Validate the construct against several business consequences without mixing their samples:
+
+```python
+from proxyscore import OutcomeSpec, validate_outcomes
+
+evidence = validate_outcomes(
+    df["health_score"],
+    df[indicator_columns],
+    {
+        "churn": OutcomeSpec(
+            df["churned_90d"], "binary", polarity="negative", window="90d"
+        ),
+        "expansion": OutcomeSpec(
+            df["expansion_180d"],
+            "continuous",
+            polarity="positive",
+            window="180d",
+            importance="supporting",
+        ),
+    },
+)
+print(evidence.summary())
+```
+
+See [Multi-outcome validation](docs/multi-outcome-validation.md) for maturity masks, required
+versus supporting evidence, non-averaging verdicts, and multi-outcome score comparison.
+
 Persist an approved baseline and monitor later batches without refitting:
 
 ```python

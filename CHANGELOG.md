@@ -31,6 +31,9 @@
 - Added governance and reproducibility manifests with typed ownership and permitted-use context,
   dataset/code revision IDs, strict mode, redaction, deterministic configuration fingerprints,
   and embedding in audit reports plus monitoring artifacts.
+- Added named multi-outcome validation for binary and continuous criteria with per-outcome
+  maturity, missingness, windows, expected polarity, required/supporting policy, separate
+  downstream and leakage evidence, non-averaging verdicts, and score-version comparisons.
 
 ## 0.1.0 (2026-06-10)
 

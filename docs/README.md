@@ -33,6 +33,9 @@ Project documentation for `proxyscore`.
 - **[Governance and reproducibility manifests](governance.md)** - attach typed ownership,
   permitted-use, data-window, revision, row-count, threshold, check, and fingerprint metadata to
   audit and monitoring artifacts.
+- **[Multi-outcome validation](multi-outcome-validation.md)** - evaluate required and supporting
+  binary or continuous outcomes on separate mature samples, detect polarity contradictions, and
+  compare score versions without averaging evidence away.
 
 The top-level [`README.md`](../README.md) has the quick reference and the project's
 positioning; [`CHANGELOG.md`](../CHANGELOG.md) tracks releases.
