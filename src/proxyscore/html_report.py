@@ -210,6 +210,41 @@ def render_audit_html(
             "</section>"
         )
 
+    governance_html = ""
+    manifest = report.governance_manifest
+    if manifest is not None:
+        context = {
+            key: value
+            for key, value in manifest.context.items()
+            if value not in (None, [], {})
+        }
+        warning_items = "".join(
+            f"<li>{html.escape(str(warning))}</li>" for warning in manifest.warnings
+        )
+        warnings = (
+            f"<h3>Warnings</h3><ul class=\"note\">{warning_items}</ul>"
+            if warning_items
+            else ""
+        )
+        governance_html = (
+            '<section aria-labelledby="governance-heading">'
+            '<h2 id="governance-heading">Governance manifest</h2>'
+            + _definition_list(
+                {
+                    "schema_version": manifest.schema_version,
+                    "generated_at": manifest.generated_at,
+                    "package_version": manifest.package_version,
+                    "configuration_fingerprint": manifest.configuration_fingerprint,
+                }
+            )
+            + "<h3>Governance context</h3>"
+            + _definition_list(context)
+            + "<h3>Row counts</h3>"
+            + _definition_list(manifest.row_counts)
+            + warnings
+            + "</section>"
+        )
+
     return "".join(
         [
             "<!doctype html><html lang=\"en\"><head>",
@@ -230,6 +265,7 @@ def render_audit_html(
             '<h2 id="metadata-heading">Report metadata</h2>',
             _definition_list(report_meta),
             "</section>",
+            governance_html,
             '<section aria-labelledby="summary-heading"><h2 id="summary-heading">Summary</h2>',
             _table(summary, "Audit check summary", None),
             "</section>",

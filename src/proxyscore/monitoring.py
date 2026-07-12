@@ -5,6 +5,7 @@ from __future__ import annotations
 import html
 import json
 import math
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -26,6 +27,7 @@ from ._utils import (
 )
 from .config import Thresholds
 from .construct import CompositeScore, PCAScore
+from .governance import GovernanceContext, GovernanceManifest, create_governance_manifest
 from .validation import downstream_validity
 
 ARTIFACT_FORMAT_VERSION = "1.0"
@@ -294,6 +296,7 @@ class MonitoringBaseline:
     baseline_outcome_performance: dict[str, Any] | None = None
     construction_state: dict[str, Any] | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    governance_manifest: dict[str, Any] | None = None
     format_version: str = ARTIFACT_FORMAT_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -361,6 +364,8 @@ class MonitoringBaseline:
         MonitoringLimits(**self.monitoring_limits)
         if self.construction_state is not None:
             _restore_constructor(self.construction_state)
+        if self.governance_manifest is not None:
+            GovernanceManifest.from_dict(self.governance_manifest)
 
     def constructor(self) -> CompositeScore | PCAScore | None:
         """Restore the fitted score constructor, when one was persisted."""
@@ -383,6 +388,7 @@ class MonitoringResult:
     checks: list[MonitoringCheck]
     metrics: dict[str, Any] = field(default_factory=dict)
     details: dict[str, pd.DataFrame] = field(default_factory=dict)
+    governance_manifest: dict[str, Any] | None = None
 
     @property
     def exit_code(self) -> int:
@@ -407,6 +413,7 @@ class MonitoringResult:
                         name: table.to_dict(orient="records")
                         for name, table in self.details.items()
                     },
+                    "governance_manifest": self.governance_manifest,
                 }
             ),
         )
@@ -430,10 +437,16 @@ class MonitoringResult:
             f"**Score:** `{self.score_id}` version `{self.score_version}`  ",
             f"**Batch:** `{self.batch_id}`  ",
             f"**Alert:** `{self.alert_state.value}` (exit code {self.exit_code})",
-            "",
-            "| Check | Status | Summary |",
-            "| --- | --- | --- |",
         ]
+        if self.governance_manifest is not None:
+            lines += [
+                f"**Governance schema:** `{self.governance_manifest['schema_version']}`  ",
+                "**Configuration fingerprint:** "
+                f"`{self.governance_manifest['configuration_fingerprint']}`",
+            ]
+            for warning in self.governance_manifest.get("warnings", []):
+                lines += ["", f"> {warning}"]
+        lines += ["", "| Check | Status | Summary |", "| --- | --- | --- |"]
         for check in self.checks:
             summary = check.summary.replace("|", "\\|")
             lines.append(f"| {check.name} | {check.status.value} | {summary} |")
@@ -474,6 +487,20 @@ class MonitoringResult:
                 else ""
             )
             tables.append(f"<h2>{html.escape(name.replace('_', ' ').title())}</h2>{rendered}{note}")
+        governance_html = ""
+        if self.governance_manifest is not None:
+            warnings = "".join(
+                f"<li>{html.escape(str(warning))}</li>"
+                for warning in self.governance_manifest.get("warnings", [])
+            )
+            governance_html = (
+                "<h2>Governance manifest</h2>"
+                f"<p><strong>Schema:</strong> "
+                f"{html.escape(str(self.governance_manifest['schema_version']))}</p>"
+                f"<p><strong>Configuration fingerprint:</strong> "
+                f"{html.escape(str(self.governance_manifest['configuration_fingerprint']))}</p>"
+                + (f"<ul>{warnings}</ul>" if warnings else "")
+            )
         return (
             "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
             '<meta name="viewport" content="width=device-width, initial-scale=1">'
@@ -489,6 +516,7 @@ class MonitoringResult:
             f"<p><strong>Batch:</strong> {html.escape(self.batch_id)}</p>"
             f"<p><strong>Alert:</strong> {html.escape(self.alert_state.value)} "
             f"(exit code {self.exit_code})</p>"
+            + governance_html
             + "".join(tables)
             + "</body></html>"
         )
@@ -524,6 +552,8 @@ def create_monitoring_baseline(
     bins: int = 10,
     created_at: datetime | None = None,
     metadata: dict[str, Any] | None = None,
+    governance: GovernanceContext | Mapping[str, Any] | None = None,
+    governance_strict: bool = False,
 ) -> MonitoringBaseline:
     """Create a reusable baseline without changing fitted constructor state."""
     if not isinstance(score_id, str) or not score_id:
@@ -576,6 +606,8 @@ def create_monitoring_baseline(
         "min": float(score_series.min()),
         "max": float(score_series.max()),
     }
+    threshold_state = _ensure_json_object(asdict(t), "thresholds")
+    monitoring_limit_state = _ensure_json_object(asdict(limits), "monitoring_limits")
     artifact = MonitoringBaseline(
         score_id=score_id,
         score_version=score_version,
@@ -594,8 +626,8 @@ def create_monitoring_baseline(
             str(column): float(indicator_frame[column].isna().mean())
             for column in indicator_frame
         },
-        thresholds=_ensure_json_object(asdict(t), "thresholds"),
-        monitoring_limits=_ensure_json_object(asdict(limits), "monitoring_limits"),
+        thresholds=threshold_state,
+        monitoring_limits=monitoring_limit_state,
         score_summary=_ensure_json_object(score_summary, "score_summary"),
         baseline_outcome_performance=(
             _ensure_json_object(baseline_performance, "baseline outcome performance")
@@ -604,6 +636,31 @@ def create_monitoring_baseline(
         ),
         construction_state=state,
         metadata=_ensure_json_object(metadata or {}, "metadata"),
+        governance_manifest=create_governance_manifest(
+            governance,
+            row_counts={
+                "baseline_rows": len(indicator_frame),
+                "score_rows": int(score_series.notna().sum()),
+                "indicator_columns": len(indicator_frame.columns),
+                "outcome_rows": int(outcome_series.notna().sum())
+                if outcome is not None
+                else 0,
+            },
+            checks={
+                "baseline_outcome_performance": baseline_performance is not None,
+                "construction_state": state is not None,
+            },
+            thresholds=threshold_state,
+            configuration={
+                "score_id": score_id,
+                "score_version": score_version,
+                "bins": bins,
+                "indicator_columns": [str(column) for column in indicator_frame.columns],
+                "monitoring_limits": monitoring_limit_state,
+            },
+            generated_at=created_at,
+            strict=governance_strict,
+        ).to_dict(),
     )
     artifact.validate()
     return artifact
@@ -625,6 +682,7 @@ def _schema_failure(
         MonitorStatus.FAILURE,
         [check],
         metrics={"validation_stopped_before_metrics": True},
+        governance_manifest=baseline.governance_manifest,
     )
 
 
@@ -890,6 +948,7 @@ def monitor_batch(
     )
 
     performance_metrics: dict[str, Any] = {}
+    outcome_rows_for_manifest = 0
     if outcome is None:
         performance_status = MonitorStatus.NOT_ASSESSABLE
         performance_summary = (
@@ -901,6 +960,7 @@ def monitor_batch(
             check_outcome_type(outcome_series)
             ensure_finite(outcome_series, "outcome")
             paired = pd.concat([score_series, outcome_series], axis=1).dropna()
+            outcome_rows_for_manifest = int(paired["outcome"].notna().sum())
             if len(paired) < 3 or paired["outcome"].nunique() < 2:
                 raise ValueError("too few matured outcomes or no outcome variation")
             current_metrics = downstream_validity(paired["score"], paired["outcome"])
@@ -990,6 +1050,33 @@ def monitor_batch(
         "max_indicator_psi": float(indicator_table["psi"].max()),
         "max_missing_rate": float(missing_table["batch_missing_rate"].max()),
     }
+    governance_manifest = None
+    if baseline.governance_manifest is not None:
+        base_manifest = GovernanceManifest.from_dict(baseline.governance_manifest)
+        governance_manifest = create_governance_manifest(
+            base_manifest.context,
+            row_counts={
+                "baseline_rows": baseline.baseline_rows,
+                "batch_rows": len(frame),
+                "score_rows": int(score_series.notna().sum()),
+                "outcome_rows": outcome_rows_for_manifest,
+            },
+            checks={
+                check.name: {
+                    "status": check.status.value,
+                    "metrics": check.metrics,
+                }
+                for check in checks
+            },
+            thresholds=baseline.thresholds,
+            configuration={
+                "score_id": baseline.score_id,
+                "score_version": baseline.score_version,
+                "batch_id": batch_id,
+                "baseline_fingerprint": base_manifest.configuration_fingerprint,
+            },
+            generated_at=observed_at,
+        ).to_dict()
     return MonitoringResult(
         score_id=baseline.score_id,
         score_version=baseline.score_version,
@@ -999,4 +1086,5 @@ def monitor_batch(
         checks=checks,
         metrics=metrics,
         details=details,
+        governance_manifest=governance_manifest,
     )

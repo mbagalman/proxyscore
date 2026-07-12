@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -15,6 +15,7 @@ from ._utils import aligned_series, as_indicator_frame, check_unique_index, vali
 from .bias import check_segments
 from .config import Thresholds
 from .construct import CompositeScore
+from .governance import GovernanceContext, GovernanceManifest, create_governance_manifest
 from .indicators import check_indicators
 from .leakage import check_leakage
 from .results import CheckResult, Status
@@ -52,6 +53,7 @@ class AuditReport:
     results: list[CheckResult] = field(default_factory=list)
     scope: dict[str, Any] = field(default_factory=dict)
     action_analysis: ActionAnalysis | None = None
+    governance_manifest: GovernanceManifest | None = None
 
     def __getitem__(self, name: str) -> CheckResult:
         for r in self.results:
@@ -82,6 +84,32 @@ class AuditReport:
         for r in self.results:
             summary = r.summary.replace("|", "\\|")
             lines.append(f"| {r.name} | {r.status.symbol} | {summary} |")
+        if self.governance_manifest is not None:
+            manifest = self.governance_manifest
+            lines += [
+                "",
+                "## Governance manifest",
+                "",
+                f"- schema_version: {manifest.schema_version}",
+                f"- generated_at: {manifest.generated_at}",
+                f"- package_version: {manifest.package_version}",
+                f"- configuration_fingerprint: {manifest.configuration_fingerprint}",
+            ]
+            context = {
+                key: value
+                for key, value in manifest.context.items()
+                if value not in (None, [], {})
+            }
+            if context:
+                lines += ["", "Governance context:", ""]
+                for key, value in context.items():
+                    lines.append(f"- {key}: {value}")
+            if manifest.row_counts:
+                lines += ["", "Row counts:", ""]
+                for key, value in manifest.row_counts.items():
+                    lines.append(f"- {key}: {value}")
+            for warning in manifest.warnings:
+                lines += ["", f"> {warning}"]
         for r in self.results:
             lines += ["", f"## {r.name}", ""]
             lines.append(f"**{r.status.symbol}** {r.summary}")
@@ -206,8 +234,12 @@ class ProxyAudit:
         segments: Any = None,
         period: Any = None,
         thresholds: Thresholds | None = None,
+        governance: GovernanceContext | Mapping[str, Any] | None = None,
+        governance_strict: bool = False,
     ):
         self.thresholds = thresholds or Thresholds()
+        self.governance = governance
+        self.governance_strict = governance_strict
 
         self.indicators = as_indicator_frame(indicators)
         check_unique_index(self.indicators.index, "indicators")
@@ -321,17 +353,43 @@ class ProxyAudit:
             )
 
         verdict, reason = self._grade(results)
+        original_rows = self._downsampled_from or n_rows
+        audit_rows = n_rows
+        indicator_count = self.indicators.shape[1]
         scope = {
-            "original_rows": self._downsampled_from or n_rows,
-            "audit_rows": n_rows,
-            "indicator_count": self.indicators.shape[1],
+            "original_rows": original_rows,
+            "audit_rows": audit_rows,
+            "indicator_count": indicator_count,
             "indicator_columns": list(self.indicators.columns),
             "score_supplied": self.score_provided,
             "outcome_supplied": self.outcome is not None,
             "segments_supplied": self.segments is not None,
             "period_supplied": self.period is not None,
         }
-        return AuditReport(verdict, reason, results, scope=scope)
+        manifest = create_governance_manifest(
+            self.governance,
+            row_counts={
+                "original_rows": original_rows,
+                "audit_rows": audit_rows,
+                "indicator_columns": indicator_count,
+                "outcome_rows": int(self.outcome.notna().sum()) if self.outcome is not None else 0,
+                "segment_rows": (
+                    int(self.segments.notna().sum()) if self.segments is not None else 0
+                ),
+                "period_rows": int(self.period.notna().sum()) if self.period is not None else 0,
+            },
+            checks={
+                result.name: {
+                    "status": result.status.value,
+                    "metrics": result.metrics,
+                }
+                for result in results
+            },
+            thresholds=asdict(t),
+            configuration=scope,
+            strict=self.governance_strict,
+        )
+        return AuditReport(verdict, reason, results, scope=scope, governance_manifest=manifest)
 
     def _find_unassessable_checks(self, results: list[CheckResult]) -> list[str]:
         """Find checks that were skipped despite having their required inputs supplied.

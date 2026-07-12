@@ -24,6 +24,13 @@
 - Added the `proxyscore` command with `audit`, `compare`, `baseline`, and `monitor` workflows,
   versioned TOML configuration, CSV and optional Parquet input, explicit column mappings,
   threshold overrides, JSON/Markdown/HTML output, privacy-safe errors, and stable exit codes.
+- Added explicit probability calibration with reusable logistic and isotonic mapping artifacts,
+  default stratified holdout evaluation, calibration curves with Wilson intervals, Brier score
+  with bootstrap uncertainty, calibration intercept/slope, expected calibration error, and
+  sparse-bin, constant-score, and severe-imbalance warnings.
+- Added governance and reproducibility manifests with typed ownership and permitted-use context,
+  dataset/code revision IDs, strict mode, redaction, deterministic configuration fingerprints,
+  and embedding in audit reports plus monitoring artifacts.
 
 ## 0.1.0 (2026-06-10)
 

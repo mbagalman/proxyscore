@@ -28,6 +28,11 @@ Project documentation for `proxyscore`.
   later batches with drift, missingness, volume, and matured-outcome checks.
 - **[Command-line interface](cli.md)** - run audit, comparison, baseline, and monitoring
   workflows from CSV or Parquet with versioned TOML configuration.
+- **[Probability calibration](calibration.md)** - map arbitrary scores to probabilities and
+  evaluate levels with held-out Brier, intercept/slope, ECE, curve, and uncertainty results.
+- **[Governance and reproducibility manifests](governance.md)** - attach typed ownership,
+  permitted-use, data-window, revision, row-count, threshold, check, and fingerprint metadata to
+  audit and monitoring artifacts.
 
 The top-level [`README.md`](../README.md) has the quick reference and the project's
 positioning; [`CHANGELOG.md`](../CHANGELOG.md) tracks releases.

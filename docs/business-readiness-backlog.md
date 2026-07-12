@@ -34,6 +34,12 @@ Priorities reflect operational risk: **P0** closes gaps that commonly prevent re
   score and indicator drift, missingness, volume, matured outcomes, and operator artifacts.
 - Shell-friendly `proxyscore` CLI commands for audits, score comparisons, monitoring baselines,
   and batch monitoring, with TOML configuration, output artifacts, and stable exit codes.
+- Explicit probability calibration with reusable logistic and isotonic mappings, held-out
+  evaluation, calibration curves, Brier score, intercept/slope, ECE, uncertainty, and
+  sparse-data warnings.
+- Governance and reproducibility manifests with score ownership, permitted-use context,
+  dataset/code revisions, row counts, checks, thresholds, strict mode, redaction, and
+  deterministic configuration fingerprints.
 
 ## P0: required for operational use
 
@@ -208,7 +214,10 @@ standardized.
 
 **Dependencies:** BR-003 through BR-005.
 
-### BR-007: Calibration assessment
+### BR-007: Calibration assessment - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. Focused calibration and
+documentation tests, Ruff, mypy, and the full test suite pass.
 
 **Problem:** When a score represents a probability or expected risk, rank discrimination is not
 enough; predicted levels must agree with observed rates.
@@ -229,7 +238,7 @@ documented calibration mapping for arbitrary proxy scores.
 
 **Dependencies:** BR-001 is recommended.
 
-### BR-008: Governance and reproducibility metadata
+### BR-008: Governance and reproducibility metadata - Complete
 
 **Problem:** An audit is difficult to approve or reproduce without knowing which score, data
 window, configuration, and code version produced it.
@@ -250,6 +259,12 @@ artifacts.
 - Tests round trips, schema versions, redaction, and deterministic fingerprints.
 
 **Dependencies:** Coordinate formats with BR-003 and BR-005.
+
+**Completion notes:** Added `GovernanceContext`, `GovernanceManifest`, strict-mode validation,
+redaction, deterministic fingerprints, and public helpers. Audit Markdown/HTML reports and
+monitoring baseline/result artifacts now embed versioned manifests. Added schema documentation and
+focused tests for round trips, schema rejection, redaction, warnings, fingerprints, audit reports,
+and monitoring artifacts.
 
 ### BR-009: Multi-outcome validation
 

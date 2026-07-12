@@ -134,6 +134,57 @@ print(result.alert_state, result.exit_code)
 See [Repeatable batch monitoring](docs/monitoring.md) for fitted-constructor artifacts, fixed
 drift bins, matured outcomes, alert states, exit codes, and monthly result retention.
 
+Attach governance and reproducibility metadata to audit and monitoring artifacts when a score needs
+business approval:
+
+```python
+from proxyscore import GovernanceContext, ProxyAudit
+
+governance = GovernanceContext(
+    score_name="customer_health",
+    score_version="2026.1",
+    owner="Customer analytics",
+    intended_uses=["retention prioritization"],
+    prohibited_uses=["automatic account cancellation"],
+    population="active B2B customers",
+    data_window="2026-01-01/2026-03-31",
+    outcome_window="2026-04-01/2026-06-30",
+    decision_owner="VP Customer Success",
+    reviewer="Risk committee",
+    dataset_id="warehouse.snapshot.customer_health.2026q1",
+    code_revision_id="abc1234",
+)
+
+report = ProxyAudit(
+    indicators=df[indicator_columns],
+    score=df["health_score"],
+    outcome=df["churned_next_quarter"],
+    governance=governance,
+    governance_strict=True,
+).run()
+print(report.governance_manifest.configuration_fingerprint)
+```
+
+See [Governance and reproducibility manifests](docs/governance.md) for the versioned JSON schema,
+strict-mode workflow, redaction behavior, and monitoring-artifact integration.
+
+When a score must represent an event probability, fit and evaluate an explicit calibration
+mapping on separate samples:
+
+```python
+from proxyscore import fit_and_assess_calibration
+
+calibration = fit_and_assess_calibration(
+    df["health_score"],
+    df["churned_next_quarter"],
+    method="logistic",  # or "isotonic"
+)
+print(calibration.metrics)
+```
+
+See [Probability calibration](docs/calibration.md) for explicit probability opt-in, reusable
+mapping artifacts, held-out evaluation, curve binning, uncertainty, and sparse-data warnings.
+
 No data handy? There's a synthetic example with a known latent construct, a plantable leak,
 and plantable drift:
 
