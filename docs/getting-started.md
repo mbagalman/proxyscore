@@ -262,16 +262,19 @@ print(report["segments"].details)
 ```
 
 ```text
-   segment    n  score_mean  score_std  smd_vs_rest  n_outcome  n_pos  n_neg  outcome_rate  validity
-enterprise  612    0.243025   0.784145     0.403428        612    137    475      0.223856  0.779662
-mid_market  837    0.053023   0.750698     0.096004        837    271    566      0.323775  0.779618
-       smb 1551   -0.124508   0.741864    -0.341060       1551    581    970      0.374597  0.776299
+   segment    n  score_mean  score_std  pooled_within_std  smd_vs_rest  n_outcome  n_pos  n_neg  outcome_rate  validity
+enterprise  612    0.243025   0.784145           0.753123     0.405389        612    137    475      0.223856  0.779662
+mid_market  837    0.053023   0.750698           0.753123     0.097648        837    271    566      0.323775  0.779618
+       smb 1551   -0.124508   0.741864           0.753123    -0.342281       1551    581    970      0.374597  0.776299
 ```
 
 Two distinct questions live here:
 
-- **Score level** (`smd_vs_rest`, a standardized mean difference): enterprise accounts score
-  higher (+0.40) and SMB lower (−0.34). That is *not* automatically bias — enterprise accounts
+- **Score level** (`smd_vs_rest`, a standardized mean difference): every segment-versus-rest
+  contrast uses the same `pooled_within_std`, calculated from variation inside segments only.
+  Differences among the other segment means therefore cannot dilute a segment's alert.
+  Enterprise accounts score higher (+0.41) and SMB lower (−0.34). That is *not* automatically
+  bias — enterprise accounts
   may genuinely be healthier, and the `outcome_rate` column confirms it (enterprise churns at
   22%, SMB at 37%). The score level tracks reality.
 - **Score validity** (`validity`, the oriented predictive strength *within* each segment): all

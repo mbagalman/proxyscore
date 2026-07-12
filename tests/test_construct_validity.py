@@ -37,6 +37,7 @@ def test_reference_ave_and_htmt_match_known_correlation_structure():
     assert result.htmt.iloc[0]["htmt"] == pytest.approx(0.20)
     assert result.ave["meets_threshold"].all()
     assert result.htmt["below_threshold"].all()
+    assert result.polarity["aligned"].all()
     assert (result.ave["valid_bootstrap_samples"] == 80).all()
     assert result.htmt.iloc[0]["valid_bootstrap_samples"] == 80
 
@@ -58,6 +59,58 @@ def test_overlapping_constructs_have_high_htmt_and_are_flagged():
     assert not bool(result.htmt.iloc[0]["below_threshold"])
     assert pd.isna(result.htmt.iloc[0]["ci_lower"])
     assert any("No bootstrap" in warning for warning in result.warnings)
+
+
+def test_negative_within_construct_correlations_gate_favorable_flags():
+    signs = np.array([1.0, -1.0, 1.0, 1.0, 1.0, 1.0])
+    correlation = np.full((6, 6), 0.16)
+    correlation[:3, :3] = 0.80
+    correlation[3:, 3:] = 0.80
+    np.fill_diagonal(correlation, 1.0)
+    correlation *= np.outer(signs, signs)
+    data = _exact_correlated_sample(correlation)
+
+    result = assess_construct_validity(
+        data,
+        {"trust": ["x0", "x1", "x2"], "value": ["x3", "x4", "x5"]},
+        n_bootstrap=0,
+    )
+
+    trust_polarity = result.polarity[result.polarity["construct"] == "trust"]
+    assert (~trust_polarity["aligned"]).sum() == 2
+    assert trust_polarity["correlation"].min() == pytest.approx(-0.80)
+    assert result.htmt.iloc[0]["htmt"] == pytest.approx(0.20)
+    assert bool(result.htmt.iloc[0]["estimate_below_threshold"])
+    assert not bool(result.htmt.iloc[0]["polarity_aligned"])
+    assert not bool(result.htmt.iloc[0]["below_threshold"])
+    trust_ave = result.ave.set_index("construct").loc["trust"]
+    assert bool(trust_ave["estimate_meets_threshold"])
+    assert not bool(trust_ave["meets_threshold"])
+    assert any("x0/x1" in warning and "withheld" in warning for warning in result.warnings)
+
+
+def test_within_correlation_floor_is_configurable():
+    correlation = np.full((6, 6), 0.16)
+    correlation[:3, :3] = 0.10
+    correlation[3:, 3:] = 0.80
+    np.fill_diagonal(correlation, 1.0)
+    data = _exact_correlated_sample(correlation)
+
+    strict = assess_construct_validity(
+        data,
+        {"trust": ["x0", "x1", "x2"], "value": ["x3", "x4", "x5"]},
+        min_within_correlation=0.20,
+        n_bootstrap=0,
+    )
+    permissive = assess_construct_validity(
+        data,
+        {"trust": ["x0", "x1", "x2"], "value": ["x3", "x4", "x5"]},
+        min_within_correlation=0.05,
+        n_bootstrap=0,
+    )
+
+    assert not strict.ave.set_index("construct").loc["trust", "polarity_aligned"]
+    assert permissive.ave.set_index("construct").loc["trust", "polarity_aligned"]
 
 
 def test_shared_complete_case_sample_and_two_indicator_warning_are_explicit():
@@ -95,7 +148,7 @@ def test_markdown_and_tables_preserve_separate_construct_results():
         data, {"first": ["a", "b"], "second": ["c", "d"]}, n_bootstrap=10
     )
 
-    assert set(result.tables()) == {"loadings", "ave", "htmt"}
+    assert set(result.tables()) == {"loadings", "ave", "polarity", "htmt"}
     assert "# Multi-construct validity" in result.to_markdown()
     assert "exploratory one-factor" in result.to_markdown()
 
@@ -129,4 +182,12 @@ def test_sample_constant_and_configuration_safeguards():
     with pytest.raises(ValueError, match="confidence_level"):
         assess_construct_validity(
             data, constructs, min_sample_size=90, confidence_level=1, n_bootstrap=0
+        )
+    with pytest.raises(ValueError, match="min_within_correlation"):
+        assess_construct_validity(
+            data,
+            constructs,
+            min_sample_size=90,
+            min_within_correlation=-1.1,
+            n_bootstrap=0,
         )

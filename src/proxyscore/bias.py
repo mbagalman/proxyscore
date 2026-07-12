@@ -4,9 +4,10 @@ Two distinct questions are asked:
 
 1. **Level differences** - do segments get systematically higher or lower
    scores? Measured by standardized mean difference (SMD) of each segment
-   versus the rest. A large SMD is not automatically a defect (enterprise
-   accounts may genuinely be healthier), but it should be a conscious
-   choice, not an artifact.
+   versus the rest, using one pooled within-segment standard deviation for
+   every contrast. A large SMD is not automatically a defect (enterprise
+   accounts may genuinely be healthier), but it should be a conscious choice,
+   not an artifact.
 2. **Validity differences** - does the score predict the outcome equally
    well in every segment? A score that works for SMB but is random noise
    for Enterprise will quietly misallocate attention. Measured by
@@ -41,7 +42,7 @@ from .results import CheckResult, Status, worst
 
 
 def segment_summary(score: Any, segments: Any, outcome: Any = None) -> pd.DataFrame:
-    """Per-segment score stats, SMD vs rest, and (optionally) validity.
+    """Per-segment score stats, common-scale SMD vs rest, and optional validity.
 
     With an outcome, each row also carries ``n_outcome`` (rows with an
     observed outcome) and, for binary outcomes, ``n_pos`` / ``n_neg`` -
@@ -65,23 +66,28 @@ def segment_summary(score: Any, segments: Any, outcome: Any = None) -> pd.DataFr
     global_rho = spearman(df["score"], df["outcome"]) if "outcome" in df else float("nan")
     polarity = -1 if (not np.isnan(global_rho) and global_rho < 0) else 1
 
+    segment_means = df.groupby("segment", observed=True)["score"].transform("mean")
+    within_degrees_of_freedom = len(df) - df["segment"].nunique()
+    pooled_within_std = (
+        float(np.sqrt(((df["score"] - segment_means) ** 2).sum() / within_degrees_of_freedom))
+        if within_degrees_of_freedom > 0
+        else float("nan")
+    )
+
     rows = []
     for seg, sub in df.groupby("segment", observed=True):
         rest = df.loc[df["segment"] != seg, "score"]
-        if len(rest) > 1 and len(sub) > 1:
-            n1, n2 = len(sub), len(rest)
-            pooled = np.sqrt(
-                ((n1 - 1) * sub["score"].var(ddof=1) + (n2 - 1) * rest.var(ddof=1))
-                / (n1 + n2 - 2)
-            )
-        else:
-            pooled = np.nan
-        smd = (sub["score"].mean() - rest.mean()) / pooled if pooled and pooled > 0 else np.nan
+        smd = (
+            (sub["score"].mean() - rest.mean()) / pooled_within_std
+            if len(rest) and pooled_within_std > 0
+            else np.nan
+        )
         row = {
             "segment": seg,
             "n": int(len(sub)),
             "score_mean": float(sub["score"].mean()),
             "score_std": float(sub["score"].std(ddof=1)) if len(sub) > 1 else np.nan,
+            "pooled_within_std": pooled_within_std,
             "smd_vs_rest": float(smd) if pd.notna(smd) else np.nan,
         }
         if "outcome" in df:
@@ -135,6 +141,8 @@ def check_segments(
         "A large score-level gap between segments (|SMD|) is not automatically bias - "
         "segments can genuinely differ. Verify the gap matches outcome reality "
         "(see per-segment outcome rates in the details table).",
+        "Every SMD uses the same ANOVA-style pooled within-segment standard deviation; "
+        "between-segment differences never inflate its denominator.",
     ]
     if len(small) > 0:
         # an excluded supplied segment is unresolved evidence, not a footnote -
@@ -209,6 +217,7 @@ def check_segments(
     metrics = {
         "n_segments": int(len(eval_table)),
         "max_abs_smd": float(eval_table["smd_vs_rest"].abs().max()),
+        "pooled_within_std": float(eval_table["pooled_within_std"].iloc[0]),
     }
     if validity_assessed:
         metrics["validity_gap"] = float(v.max() - v.min())

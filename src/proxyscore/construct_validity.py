@@ -24,13 +24,19 @@ class ConstructValidityAssessment:
     dropped_rows: int
     loadings: pd.DataFrame
     ave: pd.DataFrame
+    polarity: pd.DataFrame
     htmt: pd.DataFrame
     warnings: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
 
     def tables(self) -> dict[str, pd.DataFrame]:
-        """Return report-ready loading, AVE, and HTMT tables."""
-        return {"loadings": self.loadings, "ave": self.ave, "htmt": self.htmt}
+        """Return report-ready loading, AVE, polarity, and HTMT+ tables."""
+        return {
+            "loadings": self.loadings,
+            "ave": self.ave,
+            "polarity": self.polarity,
+            "htmt": self.htmt,
+        }
 
     def to_markdown(self) -> str:
         """Render the assessment without collapsing constructs into one verdict."""
@@ -63,6 +69,17 @@ def _validate_threshold(value: Any, name: str) -> float:
         or not 0 < value <= 1
     ):
         raise ValueError(f"{name} must be a finite number in (0, 1]")
+    return float(value)
+
+
+def _validate_correlation_threshold(value: Any, name: str) -> float:
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or not -1 <= value <= 1
+    ):
+        raise ValueError(f"{name} must be a finite number in [-1, 1]")
     return float(value)
 
 
@@ -141,6 +158,35 @@ def _estimate(
     return loading_values, ave_values, htmt_values
 
 
+def _polarity_diagnostics(
+    values: np.ndarray,
+    constructs: Mapping[str, tuple[str, ...]],
+    positions: Mapping[str, int],
+    minimum: float,
+) -> tuple[list[dict[str, Any]], dict[str, bool]]:
+    correlation = np.corrcoef(values, rowvar=False)
+    rows: list[dict[str, Any]] = []
+    aligned: dict[str, bool] = {}
+    for name, indicators in constructs.items():
+        construct_aligned = True
+        for indicator_a, indicator_b in combinations(indicators, 2):
+            value = float(correlation[positions[indicator_a], positions[indicator_b]])
+            pair_aligned = value >= minimum
+            construct_aligned &= pair_aligned
+            rows.append(
+                {
+                    "construct": name,
+                    "indicator_a": indicator_a,
+                    "indicator_b": indicator_b,
+                    "correlation": value,
+                    "minimum": minimum,
+                    "aligned": pair_aligned,
+                }
+            )
+        aligned[name] = construct_aligned
+    return rows, aligned
+
+
 def _interval(values: Sequence[float], confidence_level: float) -> tuple[float, float]:
     finite = np.asarray([value for value in values if math.isfinite(value)], dtype=float)
     if not len(finite):
@@ -156,6 +202,7 @@ def assess_construct_validity(
     *,
     ave_threshold: float = 0.50,
     htmt_threshold: float = 0.85,
+    min_within_correlation: float = 0.0,
     min_sample_size: int = 100,
     n_bootstrap: int = 500,
     confidence_level: float = 0.95,
@@ -166,8 +213,11 @@ def assess_construct_validity(
     AVE uses standardized loadings from the leading component of each construct's
     correlation matrix. HTMT is the mean absolute cross-construct correlation
     divided by the geometric mean of each construct's mean absolute within-
-    construct correlation. Percentile intervals resample rows from one shared
-    complete-case analysis sample.
+    construct correlation. This absolute-correlation variant is HTMT+. Raw
+    within-construct correlations are checked separately for polarity alignment,
+    and favorable AVE/HTMT flags are withheld when any pair falls below
+    ``min_within_correlation``. Percentile intervals resample rows from one
+    shared complete-case analysis sample.
 
     These diagnostics are screening statistics, not a fitted CFA measurement
     model. Use a structural-equation-modeling package when inference depends on
@@ -178,6 +228,9 @@ def assess_construct_validity(
     ensure_count(n_bootstrap, 0, "n_bootstrap")
     ave_threshold = _validate_threshold(ave_threshold, "ave_threshold")
     htmt_threshold = _validate_threshold(htmt_threshold, "htmt_threshold")
+    min_within_correlation = _validate_correlation_threshold(
+        min_within_correlation, "min_within_correlation"
+    )
     confidence_level = _validate_threshold(confidence_level, "confidence_level")
     if confidence_level == 1:
         raise ValueError("confidence_level must be a finite number in (0, 1)")
@@ -199,6 +252,9 @@ def assess_construct_validity(
     values = complete.to_numpy(dtype=float)
     positions = {column: index for index, column in enumerate(selected)}
     loading_values, ave_values, htmt_values = _estimate(values, normalized, positions)
+    polarity_rows, polarity_aligned = _polarity_diagnostics(
+        values, normalized, positions, min_within_correlation
+    )
 
     bootstrap_ave: dict[str, list[float]] = {name: [] for name in normalized}
     bootstrap_htmt: dict[tuple[str, str], list[float]] = {
@@ -239,7 +295,11 @@ def assess_construct_validity(
                 "ci_lower": lower,
                 "ci_upper": upper,
                 "threshold": ave_threshold,
-                "meets_threshold": ave_values[name] >= ave_threshold,
+                "estimate_meets_threshold": ave_values[name] >= ave_threshold,
+                "polarity_aligned": polarity_aligned[name],
+                "meets_threshold": (
+                    ave_values[name] >= ave_threshold and polarity_aligned[name]
+                ),
                 "valid_bootstrap_samples": len(bootstrap_ave[name]),
             }
         )
@@ -247,6 +307,7 @@ def assess_construct_validity(
     htmt_rows: list[dict[str, Any]] = []
     for pair, value in htmt_values.items():
         lower, upper = _interval(bootstrap_htmt[pair], confidence_level)
+        pair_polarity_aligned = polarity_aligned[pair[0]] and polarity_aligned[pair[1]]
         htmt_rows.append(
             {
                 "construct_a": pair[0],
@@ -255,7 +316,13 @@ def assess_construct_validity(
                 "ci_lower": lower,
                 "ci_upper": upper,
                 "threshold": htmt_threshold,
-                "below_threshold": math.isfinite(value) and value < htmt_threshold,
+                "estimate_below_threshold": math.isfinite(value) and value < htmt_threshold,
+                "polarity_aligned": pair_polarity_aligned,
+                "below_threshold": (
+                    math.isfinite(value)
+                    and value < htmt_threshold
+                    and pair_polarity_aligned
+                ),
                 "valid_bootstrap_samples": len(bootstrap_htmt[pair]),
             }
         )
@@ -273,6 +340,19 @@ def assess_construct_validity(
             "Two-indicator constructs have limited identification and less stable AVE/HTMT "
             f"estimates: {two_indicator}."
         )
+    polarity_problems = [row for row in polarity_rows if not row["aligned"]]
+    if polarity_problems:
+        descriptions = [
+            f"{row['construct']}:{row['indicator_a']}/{row['indicator_b']} "
+            f"({row['correlation']:.3f})"
+            for row in polarity_problems
+        ]
+        warnings.append(
+            "Within-construct indicator polarity is unresolved for pair(s) "
+            f"{descriptions}; correlations are below min_within_correlation="
+            f"{min_within_correlation:.3f}. Recode reversed items or revise the construct. "
+            "Favorable AVE and HTMT+ flags involving those constructs are withheld."
+        )
     if not n_bootstrap:
         warnings.append("No bootstrap requested; confidence intervals are unavailable.")
     elif any(len(samples) < n_bootstrap for samples in bootstrap_htmt.values()):
@@ -288,6 +368,8 @@ def assess_construct_validity(
 
     notes = [
         "AVE is an exploratory one-factor correlation/PCA estimate, not a CFA estimate.",
+        "HTMT+ uses absolute correlations, while the polarity table preserves raw signs and "
+        "gates favorable threshold flags.",
         "Threshold flags are conventional screening aids, not pass/fail proof of construct "
         "validity.",
         "Use SEM/CFA for model-fit tests, latent-variable inference, ordinal indicators, "
@@ -300,6 +382,7 @@ def assess_construct_validity(
         dropped_rows=dropped_rows,
         loadings=pd.DataFrame(loading_rows),
         ave=pd.DataFrame(ave_rows),
+        polarity=pd.DataFrame(polarity_rows),
         htmt=pd.DataFrame(htmt_rows),
         warnings=warnings,
         notes=notes,

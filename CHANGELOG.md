@@ -50,6 +50,12 @@
 - Calibration now reports true calibration-in-the-large from an intercept-only logistic
   recalibration with prediction logits fixed as an offset, separately from the jointly estimated
   calibration-model intercept and slope.
+- Construct validity now labels its absolute-correlation statistic as HTMT+, reports every raw
+  within-construct indicator correlation, and withholds favorable AVE/HTMT+ flags when indicator
+  polarity falls below a configurable floor.
+- Segment-versus-rest SMDs now share one ANOVA-style pooled within-segment standard deviation,
+  preventing heterogeneity among the remaining segments from inflating different denominators
+  and suppressing level-gap alerts.
 
 ## 0.1.0 (2026-06-10)
 

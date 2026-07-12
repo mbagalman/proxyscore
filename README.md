@@ -21,7 +21,7 @@ answer to the question that follows: **is this score real, or are we just compou
 | **stability** | Does the score distribution hold still over time? Population Stability Index per period with the standard 0.10 / 0.25 bands. |
 | **downstream** | Does the score predict a *delayed hard outcome* it should predict (renewal, churn, conversion)? AUC / rank correlation, lift and capture by score band, automatic polarity detection. |
 | **leakage** | Is the score secretly built from the outcome? Flags indicators with implausibly strong standalone association with the outcome, and leak-suggestive column names. |
-| **segments** | Does the score mean the same thing for every segment? Score-level gaps (standardized mean difference) and per-segment validity divergence. |
+| **segments** | Does the score mean the same thing for every segment? Score-level gaps on one pooled within-segment standardized scale and per-segment validity divergence. |
 
 The audit ends in a verdict:
 
@@ -174,8 +174,9 @@ print(validity.ave)
 print(validity.htmt)
 ```
 
-See [Multi-construct validity](docs/construct-validity.md) for AVE and HTMT definitions,
-bootstrap intervals, sample safeguards, interpretation, and when to use SEM/CFA instead.
+See [Multi-construct validity](docs/construct-validity.md) for AVE and HTMT+ definitions,
+raw-correlation polarity safeguards, bootstrap intervals, interpretation, and when to use
+SEM/CFA instead.
 
 Test whether those reflective constructs are measured comparably across business segments:
 

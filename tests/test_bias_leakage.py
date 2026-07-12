@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from proxyscore import Status, check_leakage, check_segments, leakage_scan, segment_summary
 
@@ -11,6 +12,18 @@ def test_segment_summary_levels():
     table = segment_summary(score, seg)
     assert table.loc["b", "score_mean"] > table.loc["a", "score_mean"]
     assert abs(table.loc["b", "smd_vs_rest"]) > 0.5
+
+
+def test_smd_uses_one_pooled_within_segment_standardizer():
+    score = np.array([-1.0, 0.0, 1.0, 9.0, 10.0, 11.0, 19.0, 20.0, 21.0])
+    segments = np.repeat(["low", "middle", "high"], 3)
+
+    table = segment_summary(score, segments)
+
+    assert np.allclose(table["pooled_within_std"], 1.0)
+    assert table.loc["low", "smd_vs_rest"] == pytest.approx(-15.0)
+    assert table.loc["middle", "smd_vs_rest"] == pytest.approx(0.0)
+    assert table.loc["high", "smd_vs_rest"] == pytest.approx(15.0)
 
 
 def test_check_segments_warns_on_level_gap():

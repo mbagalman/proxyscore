@@ -2,8 +2,8 @@
 
 `assess_construct_validity` provides exploratory convergent and discriminant validity diagnostics
 for two or more named reflective constructs. It reports average variance extracted (AVE) for each
-construct and the heterotrait-monotrait ratio (HTMT) for each construct pair, with row-bootstrap
-percentile confidence intervals.
+construct and the absolute-correlation heterotrait-monotrait ratio (HTMT+) for each construct
+pair, with row-bootstrap percentile confidence intervals and raw-correlation polarity safeguards.
 
 This is useful when a business scorecard claims to measure several related but distinct concepts,
 such as customer trust, perceived value, and product engagement. It is not appropriate for
@@ -26,6 +26,7 @@ assessment = assess_construct_validity(
 
 print(assessment.ave)
 print(assessment.htmt)
+print(assessment.polarity)
 print(assessment.loadings)
 print(assessment.to_markdown())
 ```
@@ -48,12 +49,25 @@ the square root of the leading eigenvalue. The exploratory AVE estimate is:
 AVE = mean(standardized loading squared)
 ```
 
-For constructs A and B, HTMT uses absolute correlations:
+For constructs A and B, HTMT+ uses absolute correlations:
 
 ```text
-HTMT(A, B) = mean(cross-construct correlations)
-             / sqrt(mean(within-A correlations) * mean(within-B correlations))
+HTMT+(A, B) = mean(absolute cross-construct correlations)
+              / sqrt(mean(absolute within-A correlations)
+                     * mean(absolute within-B correlations))
 ```
+
+Absolute correlations prevent positive and negative relationships from cancelling in the ratio,
+but they must not hide incorrectly oriented indicators. The `polarity` table therefore reports
+every raw within-construct indicator correlation. By default, any correlation below `0` marks the
+construct unresolved. Set `min_within_correlation` to a different documented floor when theory
+justifies it.
+
+The AVE and HTMT+ tables preserve the estimate-only threshold result and a `polarity_aligned`
+field. Their headline `meets_threshold` / `below_threshold` flags are favorable only when both the
+numeric threshold and polarity safeguard pass. An apparently low HTMT+ can therefore never
+authorize a discriminant-validity claim while a participating construct contains a negatively
+correlated indicator pair.
 
 The default display flags are AVE at least `0.50` and HTMT below `0.85`. These are conventional
 screening thresholds, not universal laws or an overall verdict. Inspect estimates, intervals,
@@ -72,7 +86,10 @@ contains an explicit warning. Bootstrap resampling is deterministic when `random
   a documented preprocessing pipeline; do not let this diagnostic silently invent values.
 - Two-indicator constructs are accepted but warned because their measurement models have limited
   identification and their estimates are less stable.
-- HTMT is reported as unassessed when either construct has zero mean within-construct association.
+- HTMT+ is reported as unassessed when either construct has zero mean within-construct association.
+- Raw within-construct correlations below `min_within_correlation` are named in warnings, and
+  favorable AVE/HTMT+ flags involving those constructs are withheld until item orientation or the
+  construct definition is resolved.
 - Every table retains construct names, sample information, interval bounds, and valid bootstrap
   counts. Results are not averaged into a single pass/fail score.
 
