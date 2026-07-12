@@ -34,6 +34,9 @@
 - Added named multi-outcome validation for binary and continuous criteria with per-outcome
   maturity, missingness, windows, expected polarity, required/supporting policy, separate
   downstream and leakage evidence, non-averaging verdicts, and score-version comparisons.
+- Added business recipes and a tabular adapter protocol with customer-health, lead-quality, and
+  account-risk preparation patterns, local CSV/Parquet adapters, provenance metadata,
+  point-in-time SQL examples, deduplication, and data-minimization guidance.
 
 ## 0.1.0 (2026-06-10)
 

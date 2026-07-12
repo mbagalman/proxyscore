@@ -40,8 +40,12 @@ Priorities reflect operational risk: **P0** closes gaps that commonly prevent re
 - Governance and reproducibility manifests with score ownership, permitted-use context,
   dataset/code revisions, row counts, checks, thresholds, strict mode, redaction, and
   deterministic configuration fingerprints.
-- Named multi-outcome validation with independent maturity samples, required/supporting policy,
-  polarity contradiction detection, non-averaging verdicts, reports, and score comparisons.
+- Named multi-outcome validation for binary and continuous criteria with separate mature
+  samples, required/supporting policy, polarity contradiction detection, and non-averaging
+  verdicts.
+- Business recipes and a tabular adapter protocol with customer-health, lead-quality, and
+  account-risk preparation patterns, local CSV/Parquet adapters, provenance metadata,
+  point-in-time SQL examples, deduplication, and credential-handling guidance.
 
 ## P0: required for operational use
 
@@ -297,7 +301,10 @@ with explicit type, polarity, window, importance, maturity, sample diagnostics, 
 and leakage checks. Added a documented non-averaging verdict policy, alignment-aware construction,
 namespaced reporting tables, Markdown output, and `compare_outcomes` integration.
 
-### BR-010: Business recipes and data-adapter protocol
+### BR-010: Business recipes and data-adapter protocol - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. Focused recipe and adapter
+tests pass locally.
 
 **Problem:** Teams need concrete patterns for creating honest audit inputs, while built-in vendor
 connectors would create a large security and maintenance burden.
@@ -316,6 +323,12 @@ connectors would create a large security and maintenance burden.
 **Dependencies:** BR-001 and BR-008.
 
 **Non-goal:** First-party connectors for every warehouse, CRM, or BI product.
+
+**Completion notes:** Added `TabularAdapter`, `TabularData`, adapter provenance metadata, local
+CSV and Parquet adapters, customer-health, lead-quality, and account-risk `BusinessRecipe`
+builders, recipe preparation through BR-001 alignment, local deduplication counts, SQL examples,
+and a public guide covering optional database extraction, data minimization, and credential
+handling.
 
 ## P2: statistical depth
 

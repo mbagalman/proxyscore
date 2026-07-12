@@ -36,6 +36,9 @@ Project documentation for `proxyscore`.
 - **[Multi-outcome validation](multi-outcome-validation.md)** - evaluate required and supporting
   binary or continuous outcomes on separate mature samples, detect polarity contradictions, and
   compare score versions without averaging evidence away.
+- **[Business recipes and data adapters](business-recipes.md)** - prepare customer-health,
+  lead-quality, and account-risk audit inputs with point-in-time SQL patterns, local CSV/Parquet
+  adapters, deduplication, provenance, and credential-handling guidance.
 
 The top-level [`README.md`](../README.md) has the quick reference and the project's
 positioning; [`CHANGELOG.md`](../CHANGELOG.md) tracks releases.

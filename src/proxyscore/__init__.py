@@ -19,6 +19,14 @@ Quick start::
 """
 
 from .actions import ActionAnalysis, ActionRecommendation, analyze_actions
+from .adapters import (
+    AdapterProvenance,
+    LocalCSVAdapter,
+    LocalParquetAdapter,
+    TableProvenance,
+    TabularAdapter,
+    TabularData,
+)
 from .alignment import AlignmentDiagnostics, AlignmentResult, align_delayed_outcomes
 from .audit import AuditReport, ProxyAudit, Verdict
 from .bias import check_segments, segment_summary
@@ -70,6 +78,15 @@ from .multi_outcome import (
     compare_outcomes,
     validate_outcomes,
 )
+from .recipes import (
+    BusinessRecipe,
+    RecipeResult,
+    account_risk_recipe,
+    customer_health_recipe,
+    get_business_recipe,
+    lead_quality_recipe,
+    list_business_recipes,
+)
 from .results import CheckResult, Status
 from .stability import check_stability, psi, psi_over_time
 from .validation import check_downstream, downstream_validity, lift_table
@@ -83,6 +100,8 @@ __all__ = [
     "ActionAnalysis",
     "ActionRecommendation",
     "ArtifactVersionError",
+    "AdapterProvenance",
+    "BusinessRecipe",
     "CalibrationAssessment",
     "CalibrationModel",
     "CheckResult",
@@ -92,6 +111,8 @@ __all__ = [
     "GovernanceContext",
     "GovernanceManifest",
     "GovernanceVersionError",
+    "LocalCSVAdapter",
+    "LocalParquetAdapter",
     "PCAScore",
     "MonitorStatus",
     "MonitoringBaseline",
@@ -106,10 +127,15 @@ __all__ = [
     "OutcomeType",
     "OutcomeValidation",
     "ProxyAudit",
+    "RecipeResult",
     "ScoreComparison",
     "Status",
+    "TableProvenance",
+    "TabularAdapter",
+    "TabularData",
     "Thresholds",
     "Verdict",
+    "account_risk_recipe",
     "align_delayed_outcomes",
     "analyze_actions",
     "assess_calibration",
@@ -124,11 +150,15 @@ __all__ = [
     "create_monitoring_baseline",
     "create_governance_manifest",
     "cronbach_alpha",
+    "customer_health_recipe",
     "downstream_validity",
     "fit_and_assess_calibration",
     "fit_calibrator",
+    "get_business_recipe",
     "indicator_summary",
+    "lead_quality_recipe",
     "leakage_scan",
+    "list_business_recipes",
     "lift_table",
     "monitor_batch",
     "psi",

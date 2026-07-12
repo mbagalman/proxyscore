@@ -135,6 +135,29 @@ print(evidence.summary())
 See [Multi-outcome validation](docs/multi-outcome-validation.md) for maturity masks, required
 versus supporting evidence, non-averaging verdicts, and multi-outcome score comparison.
 
+Prepare common business audit inputs with local files and point-in-time recipe patterns:
+
+```python
+from proxyscore import LocalCSVAdapter, ProxyAudit, customer_health_recipe
+
+tables = LocalCSVAdapter(
+    {
+        "snapshots": "exports/customer_health_snapshots.csv",
+        "outcomes": "exports/churn_events.csv",
+    }
+).load()
+
+prepared = customer_health_recipe().prepare(tables, as_of="2026-04-01")
+report = ProxyAudit(**prepared.audit_inputs()).run()
+print(tables.provenance.summary())
+print(prepared.summary())
+print(report.verdict)
+```
+
+See [Business recipes and data adapters](docs/business-recipes.md) for customer-health,
+lead-quality, and account-risk recipes, local CSV/Parquet adapters, point-in-time SQL,
+deduplication, provenance, and credential-handling guidance.
+
 Persist an approved baseline and monitor later batches without refitting:
 
 ```python
