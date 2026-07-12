@@ -170,6 +170,8 @@ def _coerce_dataclass_value(current: Any, value: Any, name: str) -> Any:
             return float(value)
         except ValueError as exc:
             raise CliInputError(f"{name} must be a number") from exc
+    if isinstance(current, list):
+        return [item.strip() for item in value.split(",") if item.strip()]
     return value
 
 
