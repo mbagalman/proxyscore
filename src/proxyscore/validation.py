@@ -27,6 +27,7 @@ from ._utils import (
     ensure_finite,
     fmt,
     is_binary,
+    quantile_bins,
     spearman,
     to_binary,
     validate_score,
@@ -72,8 +73,7 @@ def lift_table(
             )
     if len(df) < n_bands:
         raise ValueError(f"need at least {n_bands} rows for {n_bands} bands")
-    ranks = df["score"].rank(method="first", ascending=ascending)
-    df["band"] = pd.qcut(ranks, q=n_bands, labels=range(1, n_bands + 1)).astype(int)
+    df["band"] = quantile_bins(df["score"], n_bands, ascending=ascending)
     overall = df["outcome"].mean()
     g = df.groupby("band").agg(
         n=("outcome", "size"),

@@ -228,6 +228,9 @@ from proxyscore import lift_table
 lift_table(df["health_score"], df["churned"], n_bands=10, ascending=True)
 ```
 
+Band boundaries never split equal scores. If ties cross a requested quantile boundary, the table
+uses fewer, potentially uneven bands rather than assigning identical scores by row order.
+
 ```text
  band   n  score_min  score_max  outcome_rate     lift  cum_capture
     1 300  -2.238169  -0.967940      0.770000 2.335693     0.233569

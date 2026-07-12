@@ -91,20 +91,26 @@ the nearest fitted step.
 The result reports:
 
 - `brier_score`: mean squared error between probability and binary outcome; lower is better.
-- `calibration_intercept`: ideal value `0`; systematic positive or negative values indicate
-  underprediction or overprediction.
+- `calibration_in_the_large` (also available as `calibration_intercept`): the intercept-only
+  recalibration offset with `logit(prediction)` fixed at slope `1`. Its ideal value is `0`;
+  positive or negative values indicate systematic underprediction or overprediction.
+- `calibration_model_intercept`: the intercept estimated jointly with the calibration slope. Its
+  ideal value is `0`, but it describes the fitted recalibration line at logit prediction `0` and
+  is not calibration-in-the-large.
 - `calibration_slope`: ideal value `1`; a value below `1` commonly indicates predictions that
-  are too extreme. It is not identifiable for constant predictions.
+  are too extreme. The slope and joint model intercept are not identifiable for constant
+  predictions.
 - `expected_calibration_error`: sample-weighted mean absolute difference between each bin's mean
   prediction and observed rate; lower is better.
 - `evaluation_sample_size`, positive count/rate, requested/effective bin counts, and fit sample
   size where a mapping was fitted.
 
-Curve data uses equal-frequency bins based on stable probability ranks. This produces the
-requested number of similarly sized diagnostic groups even when predictions contain ties. Each
-row includes the bin size, positive count, mean prediction, observed rate, absolute gap, and a
-Wilson confidence interval for the observed rate. The Brier score receives a nonparametric
-bootstrap confidence interval by default.
+Curve data uses quantile boundaries on probability values. Equal predictions always remain in
+the same bin, making the curve and ECE invariant to row order. When ties cross a requested
+boundary, the effective number of bins is lower and bin sizes can be uneven. Each row includes
+the bin size, positive count, mean prediction, observed rate, absolute gap, and a Wilson
+confidence interval for the observed rate. The Brier score receives a nonparametric bootstrap
+confidence interval by default.
 
 `min_bin_size` defaults to 30. Every smaller bin is marked `sparse=True` and produces a warning.
 Severe class imbalance and constant predictions also produce explicit warnings. These warnings

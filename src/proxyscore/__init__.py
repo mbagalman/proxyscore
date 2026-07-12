@@ -58,6 +58,10 @@ from .indicators import (
     vif,
 )
 from .leakage import check_leakage, leakage_scan
+from .measurement_invariance import (
+    MeasurementInvarianceAssessment,
+    assess_measurement_invariance,
+)
 from .monitoring import (
     ArtifactVersionError,
     MonitoringBaseline,
@@ -115,6 +119,7 @@ __all__ = [
     "GovernanceVersionError",
     "LocalCSVAdapter",
     "LocalParquetAdapter",
+    "MeasurementInvarianceAssessment",
     "PCAScore",
     "MonitorStatus",
     "MonitoringBaseline",
@@ -142,6 +147,7 @@ __all__ = [
     "analyze_actions",
     "assess_calibration",
     "assess_construct_validity",
+    "assess_measurement_invariance",
     "check_downstream",
     "check_indicators",
     "check_leakage",

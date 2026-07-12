@@ -19,6 +19,7 @@ from ._utils import (
     ensure_count,
     ensure_finite,
     is_binary,
+    quantile_bins,
     spearman,
     to_binary,
     validate_score,
@@ -359,11 +360,12 @@ def _band_details(
     details["absolute_rank_change"] = (
         details["candidate_rank_percentile"] - details["baseline_rank_percentile"]
     ).abs()
-    baseline_rank = baseline_oriented.rank(method="first", ascending=False)
-    candidate_rank = candidate_oriented.rank(method="first", ascending=False)
-    labels = range(1, n_bands + 1)
-    details["baseline_band"] = pd.qcut(baseline_rank, q=n_bands, labels=labels).astype(int)
-    details["candidate_band"] = pd.qcut(candidate_rank, q=n_bands, labels=labels).astype(int)
+    details["baseline_band"] = quantile_bins(
+        baseline_oriented, n_bands, ascending=False
+    ).to_numpy()
+    details["candidate_band"] = quantile_bins(
+        candidate_oriented, n_bands, ascending=False
+    ).to_numpy()
     migration = (
         details.groupby(["baseline_band", "candidate_band"], observed=True)
         .size()

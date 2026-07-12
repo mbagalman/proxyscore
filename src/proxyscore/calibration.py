@@ -9,7 +9,7 @@ from typing import Any, Literal, cast
 
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
+from scipy.optimize import brentq, minimize
 from scipy.special import expit
 from scipy.stats import norm
 
@@ -21,6 +21,7 @@ from ._utils import (
     ensure_count,
     ensure_finite,
     is_binary,
+    quantile_bins,
     to_binary,
     validate_score,
 )
@@ -224,10 +225,20 @@ def fit_calibrator(
 def _calibration_regression(probabilities: np.ndarray, outcome: np.ndarray) -> tuple[float, float]:
     predictor = _logit(probabilities)
     if np.unique(predictor).size == 1:
-        prevalence = float(np.clip(outcome.mean(), 1e-12, 1 - 1e-12))
-        return float(_logit(np.array([prevalence]))[0] - predictor[0]), float("nan")
+        return float("nan"), float("nan")
     parameters, _ = _fit_logistic(predictor, outcome)
     return parameters[0], parameters[1]
+
+
+def _calibration_in_the_large(probabilities: np.ndarray, outcome: np.ndarray) -> float:
+    """Fit an intercept with logit predictions fixed as an offset."""
+    offset = _logit(probabilities)
+    observed = float(outcome.sum())
+
+    def score(intercept: float) -> float:
+        return float(expit(offset + intercept).sum() - observed)
+
+    return float(brentq(score, -100.0, 100.0))
 
 
 def _wilson_interval(positives: int, n: int, confidence_level: float) -> tuple[float, float]:
@@ -255,8 +266,8 @@ def assess_calibration(
 
     Arbitrary scores are never interpreted as probabilities. Supply a fitted
     ``model`` or explicitly set ``assume_probabilities=True`` for an already
-    probabilistic score. Curve bins are equal-frequency bins based on stable
-    probability ranks; ECE is the sample-weighted absolute bin gap.
+    probabilistic score. Curve bins use probability-value quantile boundaries
+    that never split ties; ECE is the sample-weighted absolute bin gap.
     """
     ensure_count(bins, 2, "bins")
     ensure_count(min_bin_size, 1, "min_bin_size")
@@ -283,9 +294,7 @@ def assess_calibration(
     probability_values = frame["probability"].to_numpy()
     outcome_values = frame["outcome"].to_numpy()
 
-    effective_bins = min(bins, len(frame))
-    ranks = frame["probability"].rank(method="first")
-    frame["bin"] = pd.qcut(ranks, q=effective_bins, labels=False) + 1
+    frame["bin"] = quantile_bins(frame["probability"], min(bins, len(frame)))
     rows: list[dict[str, Any]] = []
     for bin_number, group in frame.groupby("bin", sort=True):
         n = len(group)
@@ -309,7 +318,10 @@ def assess_calibration(
     curve = pd.DataFrame(rows)
     brier = float(np.mean((probability_values - outcome_values) ** 2))
     ece = float((curve["absolute_gap"] * curve["n"]).sum() / len(frame))
-    intercept, slope = _calibration_regression(probability_values, outcome_values)
+    calibration_in_the_large = _calibration_in_the_large(
+        probability_values, outcome_values
+    )
+    model_intercept, slope = _calibration_regression(probability_values, outcome_values)
 
     bootstrap_values: list[float] = []
     if n_bootstrap:
@@ -328,7 +340,7 @@ def assess_calibration(
     sparse_count = int(curve["sparse"].sum())
     if sparse_count:
         warnings.append(
-            f"{sparse_count} of {len(curve)} equal-frequency bins contain fewer than "
+            f"{sparse_count} of {len(curve)} quantile bins contain fewer than "
             f"min_bin_size={min_bin_size} observations; interpret their observed rates cautiously."
         )
     if np.unique(probability_values).size == 1:
@@ -348,18 +360,23 @@ def assess_calibration(
         "brier_score": brier,
         "brier_ci_lower": float(brier_lower),
         "brier_ci_upper": float(brier_upper),
-        "calibration_intercept": intercept,
+        "calibration_intercept": calibration_in_the_large,
+        "calibration_in_the_large": calibration_in_the_large,
+        "calibration_model_intercept": model_intercept,
         "calibration_slope": slope,
         "expected_calibration_error": ece,
         "requested_bins": bins,
         "effective_bins": len(curve),
-        "binning": "equal_frequency_stable_rank",
+        "binning": "quantile_value_boundaries_tie_preserving",
         "confidence_level": float(confidence_level),
         "bootstrap_samples": n_bootstrap,
         "evaluation_source": "fitted_mapping" if model is not None else "explicit_probabilities",
     }
     notes = [
-        "Ideal calibration has intercept 0 and slope 1; Brier score and ECE are better near 0.",
+        "Calibration-in-the-large fixes the logit-prediction slope at 1; its ideal offset is 0.",
+        "The calibration model intercept and slope are estimated jointly and have ideal values "
+        "0 and 1; the joint intercept is not calibration-in-the-large.",
+        "Brier score and ECE are better near 0.",
         "Bin-rate uncertainty uses Wilson intervals; the Brier interval uses "
         "nonparametric bootstrap.",
     ]

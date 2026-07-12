@@ -88,8 +88,12 @@ specialized package such as `semopy` or R's `lavaan` when decisions depend on an
 - cross-loadings, correlated measurement errors, method factors, or hierarchical factors;
 - formal tests comparing alternative measurement models;
 - latent regressions, mediation, or other structural paths;
-- measurement invariance across groups or time.
+- measurement invariance that needs ordinal or robust estimators, partial invariance,
+  longitudinal dependence, or a model outside the built-in continuous simple-structure ladder.
 
 For consequential survey instruments, the usual workflow is to specify the measurement model
 from theory, fit and diagnose it in SEM/CFA, evaluate invariance where relevant, and use these
 lightweight metrics only as reproducible screening and monitoring companions.
+
+For the supported continuous simple-structure case, see
+[Measurement invariance across segments](measurement-invariance.md).

@@ -42,6 +42,9 @@ Project documentation for `proxyscore`.
 - **[Multi-construct validity](construct-validity.md)** - screen named reflective constructs with
   exploratory AVE, HTMT, shared-sample safeguards, bootstrap intervals, and clear SEM/CFA
   escalation guidance.
+- **[Measurement invariance](measurement-invariance.md)** - test configural, metric, scalar, and
+  strict invariance across segments with prerequisite gating, sparse-group safeguards, and a
+  published lavaan reference benchmark.
 
 The top-level [`README.md`](../README.md) has the quick reference and the project's
 positioning; [`CHANGELOG.md`](../CHANGELOG.md) tracks releases.

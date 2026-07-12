@@ -177,6 +177,26 @@ print(validity.htmt)
 See [Multi-construct validity](docs/construct-validity.md) for AVE and HTMT definitions,
 bootstrap intervals, sample safeguards, interpretation, and when to use SEM/CFA instead.
 
+Test whether those reflective constructs are measured comparably across business segments:
+
+```python
+from proxyscore import assess_measurement_invariance
+
+invariance = assess_measurement_invariance(
+    survey,
+    segments=survey["customer_tier"],
+    constructs={
+        "trust": ["reliable", "transparent", "keeps_promises"],
+        "value": ["worth_price", "useful", "good_investment"],
+    },
+)
+print(invariance.levels)
+print(invariance.highest_supported_level)
+```
+
+See [Measurement invariance](docs/measurement-invariance.md) for the staged configural, metric,
+scalar, and strict models, prerequisite gating, sparse-group behavior, assumptions, and limits.
+
 Persist an approved baseline and monitor later batches without refitting:
 
 ```python

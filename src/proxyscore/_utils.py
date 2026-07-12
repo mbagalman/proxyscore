@@ -86,6 +86,28 @@ def ensure_count(value: Any, minimum: int, name: str) -> None:
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
 
 
+def quantile_bins(values: pd.Series, n_bins: int, *, ascending: bool = True) -> pd.Series:
+    """Assign value-boundary quantile bins without splitting ties.
+
+    Bin 1 contains the lowest values when ``ascending`` is true and the highest
+    values otherwise. Average ranks keep equal values together; unused quantile
+    slots are removed, so the result may contain fewer than ``n_bins`` bins and
+    bins may have unequal sizes.
+    """
+    if values.empty:
+        raise ValueError("cannot create quantile bins from an empty series")
+    if values.isna().any():
+        raise ValueError("quantile bin values must not contain missing values")
+    requested = min(n_bins, len(values))
+    midranks = values.rank(method="average")
+    slots = np.floor((midranks.to_numpy() - 1) * requested / len(values)).astype(int)
+    used_slots = np.unique(slots)
+    codes = pd.Series(np.searchsorted(used_slots, slots), index=values.index, dtype=int)
+    effective_bins = len(used_slots)
+    bins = codes + 1 if ascending else effective_bins - codes
+    return bins.astype(int)
+
+
 def validate_score(s: pd.Series, what: str = "score") -> None:
     """Raise unless a score Series is real-valued numeric and finite."""
     if not pd.api.types.is_numeric_dtype(s) or pd.api.types.is_complex_dtype(s):

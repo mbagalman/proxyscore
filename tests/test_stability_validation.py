@@ -106,6 +106,21 @@ def test_lift_table_monotone_signal():
     assert lt.iloc[0]["lift"] > 1.5
 
 
+def test_lift_table_keeps_tied_scores_together_and_is_row_order_invariant():
+    score = pd.Series([0.0] * 100)
+    outcome = pd.Series([1] * 20 + [0] * 80)
+    shuffled = outcome.sample(frac=1, random_state=7).reset_index(drop=True)
+
+    ordered = lift_table(score, outcome, n_bands=10)
+    reordered = lift_table(score, shuffled, n_bands=10)
+
+    assert len(ordered) == len(reordered) == 1
+    assert ordered.iloc[0]["n"] == 100
+    assert ordered.iloc[0]["score_min"] == ordered.iloc[0]["score_max"] == 0.0
+    assert np.isclose(ordered.iloc[0]["outcome_rate"], 0.2)
+    assert np.isclose(reordered.iloc[0]["outcome_rate"], 0.2)
+
+
 def test_downstream_highly_imbalanced_binary():
     rng = np.random.default_rng(42)
     score = pd.Series(rng.normal(0, 1, 10000))

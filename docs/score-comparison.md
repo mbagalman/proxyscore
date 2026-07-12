@@ -100,7 +100,9 @@ markdown = comparison.to_markdown(max_rows=50)
 Raw score correlation can be misleading when the scale changes. The comparison therefore
 reports raw Pearson and Spearman correlation plus polarity-oriented Spearman correlation.
 Entity-level rank movement uses oriented percentile ranks, and band migration assigns band 1 to
-the highest-priority records for each version.
+the highest-priority records for each version. Bands use score-value quantile boundaries: tied
+scores always remain together, so migration is invariant to row order and fewer than the
+requested number of bands may be present.
 
 Cross-version PSI is also reported, but it is scale-dependent. Treat it as descriptive if the
 candidate changes score units or range.

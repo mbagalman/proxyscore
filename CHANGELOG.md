@@ -40,6 +40,16 @@
 - Added exploratory multi-construct validity assessment with named one-factor loadings, AVE and
   HTMT tables, row-bootstrap confidence intervals, shared complete-case safeguards, synthetic
   reference tests, and guidance for escalating confirmatory work to SEM/CFA software.
+- Added continuous-indicator multigroup CFA measurement-invariance assessment with separately
+  reported configural, metric, scalar, and strict levels, prerequisite-gated comparability,
+  sparse-group and convergence safeguards, change-in-fit criteria, parameter tables, and a
+  published Holzinger-Swineford/lavaan reference benchmark.
+- Quantile lift, calibration, and score-migration bands now preserve tied values at shared value
+  boundaries. Effective band counts may shrink instead of introducing row-order-dependent lift,
+  ECE, or migration results.
+- Calibration now reports true calibration-in-the-large from an intercept-only logistic
+  recalibration with prediction logits fixed as an offset, separately from the jointly estimated
+  calibration-model intercept and slope.
 
 ## 0.1.0 (2026-06-10)
 

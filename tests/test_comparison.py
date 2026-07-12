@@ -186,6 +186,31 @@ def test_rank_and_band_migration_capture_changed_ordering():
     assert result.migration["rate"].sum() == pytest.approx(1)
 
 
+def test_tied_migration_bands_are_entity_stable_under_row_reordering():
+    index = pd.Index([f"entity-{number}" for number in range(12)])
+    baseline = pd.Series([0.0] * 8 + [1.0] * 4, index=index)
+    candidate = pd.Series([0.0] * 4 + [1.0] * 8, index=index)
+    outcome = pd.Series([0] * 6 + [1] * 6, index=index)
+
+    original = compare_scores(
+        baseline, candidate, outcome, n_bands=4, n_bootstrap=0
+    )
+    reordered = compare_scores(
+        baseline.iloc[::-1],
+        candidate.iloc[::-1],
+        outcome.iloc[::-1],
+        n_bands=4,
+        n_bootstrap=0,
+    )
+
+    columns = ["baseline_band", "candidate_band"]
+    original_bands = original.rank_movements.set_index("entity")[columns].sort_index()
+    reordered_bands = reordered.rank_movements.set_index("entity")[columns].sort_index()
+    pd.testing.assert_frame_equal(original_bands, reordered_bands)
+    assert original_bands["baseline_band"].nunique() == 2
+    assert original_bands["candidate_band"].nunique() == 2
+
+
 def test_action_capacity_comparison_reports_changed_assignments():
     outcome = pd.Series([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
     baseline = pd.Series(np.arange(10.0))

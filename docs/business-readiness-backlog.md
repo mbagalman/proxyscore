@@ -349,13 +349,27 @@ pairwise HTMT, row-bootstrap percentile intervals, one shared complete-case samp
 threshold flags, sample and identifiability safeguards, report-ready tables/Markdown, analytically
 known synthetic reference tests, and a guide defining when SEM/CFA software is required.
 
-### BR-012: Measurement invariance across segments
+### BR-012: Measurement invariance across segments - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. Synthetic invariance and
+noninvariance, sparse-group, published-reference, documentation, Ruff, mypy, and full-suite checks
+pass locally.
 
 Add staged configural, metric, scalar, and strict invariance testing, or a clearly documented
 subset. Report every level separately, handle sparse groups, and never claim cross-group
 comparability after a prerequisite level fails. Validate against published reference examples.
 
 **Dependencies:** BR-011 and existing segment checks.
+
+**Completion notes:** Added `MeasurementInvarianceAssessment` and
+`assess_measurement_invariance` with continuous-indicator multigroup maximum-likelihood CFA,
+marker-variable identification, freely correlated factors, staged configural/metric/scalar/strict
+constraints, absolute and change-in-fit criteria, chi-square difference tests, hard prerequisite
+gating, complete-case and sparse-group safeguards, convergence status, report-ready sample/model/
+parameter tables, Markdown output, synthetic failure tests, and numerical reproduction of the
+published Holzinger-Swineford lavaan example. The guide defines supported comparison claims and
+when ordinal, robust, partial, longitudinal, or more complex models require specialized SEM
+software.
 
 ### BR-013: PCA loading-drift monitoring
 
