@@ -371,7 +371,12 @@ published Holzinger-Swineford lavaan example. The guide defines supported compar
 when ordinal, robust, partial, longitudinal, or more complex models require specialized SEM
 software.
 
-### BR-013: PCA loading-drift monitoring
+### BR-013: PCA loading-drift monitoring - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. Stable and changed loading
+structures, sign alignment, bootstrap uncertainty, sample safeguards, artifact round trips,
+monitoring integration, no-refit behavior, documentation, Ruff, mypy, and full-suite checks pass
+locally.
 
 Store PCA loadings and compare later samples using sign-aligned vector similarity, loading
 deltas, explained-variance changes, and uncertainty where appropriate. Integrate with BR-005
@@ -379,13 +384,34 @@ without silently refitting the baseline PCA.
 
 **Dependencies:** BR-005 and existing `PCAScore` fitted state.
 
-### BR-014: Survival-style validation
+**Completion notes:** Added `PCALoadingDriftAssessment` and `assess_pca_loading_drift` with a
+fixed fitted `PCAScore` baseline, isolated current-sample PCA extraction, whole-vector sign
+alignment, cosine similarity, per-indicator loading deltas, explained-variance change,
+current-sample row-bootstrap percentile intervals, complete-case and degeneracy safeguards, and
+report-ready metrics/tables/Markdown. `monitor_batch` now emits a thresholded
+`pca_loading_drift` check and detail table only for persisted PCA constructors, while production
+scores continue to use the restored baseline transform and the baseline artifact remains
+unchanged.
+
+### BR-014: Survival-style validation - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. Synthetic censored-outcome,
+input-safeguard, optional probability, documentation, Ruff, mypy, and full-suite checks pass
+locally.
 
 Support right-censored time-to-event outcomes using concordance and time-dependent evaluation at
 declared horizons. Require censoring information, separate ranking from calibration, and use a
 proven optional survival-analysis dependency rather than implementing estimators from scratch.
 
 **Dependencies:** BR-001.
+
+**Completion notes:** Added `SurvivalValidationAssessment` and `assess_survival_validation` with
+mandatory duration and event-observed inputs, an explicit censoring-reference sample, configurable
+score polarity, IPCW concordance through the latest declared horizon, cumulative/dynamic AUC at
+each horizon, and separate optional IPCW Brier scores for supplied survival probabilities. The
+implementation lazily uses the optional `scikit-survival` dependency, preserves strict row
+alignment, reports case/control and censoring counts, rejects unsupported follow-up horizons and
+sparse samples before estimation, and documents assumptions plus unsupported survival designs.
 
 ## Suggested release sequence
 

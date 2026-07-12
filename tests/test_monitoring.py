@@ -144,6 +144,66 @@ def test_pca_constructor_state_round_trip():
     )
 
 
+def test_pca_monitoring_reports_stable_loadings_without_refitting_baseline():
+    indicators, _, _, outcome = baseline_data()
+    constructor = PCAScore().fit(indicators)
+    baseline = create_monitoring_baseline(
+        indicators,
+        score_id="pca-score",
+        score_version="1",
+        score_constructor=constructor,
+        outcome=outcome,
+        monitoring_limits=MonitoringLimits(pca_bootstrap_samples=30),
+    )
+    before = baseline.to_json()
+
+    result = monitor_batch(baseline, indicators, outcome=outcome)
+    loading_check = check(result, "pca_loading_drift")
+
+    assert loading_check.status is MonitorStatus.INFORMATIONAL
+    assert loading_check.metrics["cosine_similarity"] == pytest.approx(1.0)
+    assert loading_check.metrics["max_abs_loading_delta"] == pytest.approx(0.0)
+    assert "pca_loading_drift" in result.details
+    assert baseline.to_json() == before
+
+
+def test_pca_monitoring_fails_on_changed_loading_structure():
+    rng = np.random.default_rng(72)
+    n = 500
+    latent = rng.normal(size=n)
+    reference = pd.DataFrame(
+        {
+            "a": latent + rng.normal(scale=0.2, size=n),
+            "b": latent + rng.normal(scale=0.2, size=n),
+            "c": latent + rng.normal(scale=0.2, size=n),
+        }
+    )
+    constructor = PCAScore().fit(reference)
+    baseline = create_monitoring_baseline(
+        reference,
+        score_id="pca-score",
+        score_version="1",
+        score_constructor=constructor,
+        monitoring_limits=MonitoringLimits(pca_bootstrap_samples=30),
+    )
+    changed_latent = rng.normal(size=n)
+    changed = pd.DataFrame(
+        {
+            "a": changed_latent + rng.normal(scale=0.2, size=n),
+            "b": -changed_latent + rng.normal(scale=0.2, size=n),
+            "c": rng.normal(size=n),
+        }
+    )
+
+    result = monitor_batch(baseline, changed)
+    loading_check = check(result, "pca_loading_drift")
+
+    assert loading_check.status is MonitorStatus.FAILURE
+    assert result.alert_state is MonitorStatus.FAILURE
+    assert loading_check.metrics["cosine_similarity"] < 0.80
+    assert loading_check.metrics["max_abs_loading_delta"] > 0.50
+
+
 def test_monitoring_same_batch_with_mature_outcomes_is_informational():
     baseline, indicators, score, outcome = make_baseline()
     result = monitor_batch(
@@ -419,6 +479,18 @@ def test_monitoring_limit_validation():
         MonitoringLimits(volume_failure_low=0.8, volume_warning_low=0.5)
     with pytest.raises(ValueError, match="performance_warning_drop"):
         MonitoringLimits(performance_warning_drop=0.2, performance_failure_drop=0.1)
+    with pytest.raises(ValueError, match="pca_cosine_failure_below"):
+        MonitoringLimits(
+            pca_cosine_warning_below=0.90,
+            pca_cosine_failure_below=0.95,
+        )
+    with pytest.raises(ValueError, match="pca_loading_delta_warning"):
+        MonitoringLimits(
+            pca_loading_delta_warning=0.30,
+            pca_loading_delta_failure=0.20,
+        )
+    with pytest.raises(ValueError, match="pca_min_complete_rows"):
+        MonitoringLimits(pca_min_complete_rows=2)
 
 
 def test_monitor_status_exit_codes_are_stable():

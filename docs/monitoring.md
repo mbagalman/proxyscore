@@ -58,7 +58,9 @@ The JSON artifact contains:
 
 `CompositeScore` state includes fitted scaling parameters, weights, coverage rules, and the rank
 reference sample when rank scaling is used. `PCAScore` state includes fitted means, standard
-deviations, loadings, and explained variance. Monitoring calls `transform`; it never calls `fit`.
+deviations, loadings, and explained variance. Production scoring calls `transform`; it never calls
+`fit`. A later batch PCA may be fitted in isolation for loading-drift diagnosis, but it is never
+stored back into or used to replace the approved constructor.
 
 Artifacts use format version `1.0`. An unsupported or malformed version raises
 `ArtifactVersionError` before monitoring begins. There is no automatic migration yet; recreate
@@ -121,6 +123,9 @@ Each valid run evaluates:
 - **Score drift:** PSI using the baseline's stored score cuts and proportions.
 - **Indicator drift:** per-indicator PSI using each stored reference distribution.
 - **Missingness:** current rates and change from baseline.
+- **PCA loading drift:** for persisted `PCAScore` baselines, sign-aligned loading similarity,
+  per-indicator loading changes, and explained-variance change with current-batch bootstrap
+  uncertainty.
 - **Outcome performance:** oriented AUC or absolute Spearman once delayed outcomes mature.
 
 Outcome performance compares with the baseline metric when one was captured. It is marked
@@ -168,6 +173,9 @@ baseline = create_monitoring_baseline(
 ```
 
 These settings are part of the artifact, so later runs cannot silently pick up different defaults.
+PCA-specific limits cover cosine similarity, maximum loading delta, explained-variance drop,
+minimum complete rows, and bootstrap count. See
+[PCA loading-drift monitoring](pca-loading-drift.md) for defaults and interpretation.
 
 ## Result retention
 

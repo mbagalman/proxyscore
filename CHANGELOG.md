@@ -56,6 +56,12 @@
 - Segment-versus-rest SMDs now share one ANOVA-style pooled within-segment standard deviation,
   preventing heterogeneity among the remaining segments from inflating different denominators
   and suppressing level-gap alerts.
+- Added PCA loading-drift assessment with fixed-baseline sign alignment, cosine similarity,
+  per-indicator loading deltas, explained-variance changes, current-batch bootstrap intervals,
+  and automatic monitoring checks that never replace the approved `PCAScore` state.
+- Added optional right-censored survival validation using `scikit-survival`, with explicit
+  censoring-reference data, IPCW concordance, cumulative/dynamic AUC at declared horizons,
+  separate optional IPCW Brier results, score-polarity handling, and follow-up safeguards.
 
 ## 0.1.0 (2026-06-10)
 

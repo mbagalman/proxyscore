@@ -49,6 +49,9 @@ The installed `proxyscore` command exposes `audit`, `compare`, `baseline`, and `
 workflows. See the [CLI guide](docs/cli.md). Install `proxyscore[parquet]` when reading Parquet
 files from the command line.
 
+Install `proxyscore[survival]` to evaluate right-censored time-to-event outcomes with the optional
+`scikit-survival` integration.
+
 ## Quick start
 
 ```python
@@ -198,6 +201,27 @@ print(invariance.highest_supported_level)
 See [Measurement invariance](docs/measurement-invariance.md) for the staged configural, metric,
 scalar, and strict models, prerequisite gating, sparse-group behavior, assumptions, and limits.
 
+Evaluate an event-risk ranking without treating rows lost to follow-up as non-events:
+
+```python
+from proxyscore import assess_survival_validation
+
+survival = assess_survival_validation(
+    evaluation["account_risk"],
+    evaluation["days_to_event_or_last_followup"],
+    evaluation["event_observed"],
+    horizons=[30, 60, 90],
+    reference_duration=development["days_to_event_or_last_followup"],
+    reference_event_observed=development["event_observed"],
+    survival_probabilities=predicted_survival[[30, 60, 90]],
+)
+print(survival.ranking_by_horizon)
+print(survival.calibration_by_horizon)
+```
+
+See [Survival-style validation](docs/survival-validation.md) for the censoring contract, IPCW
+concordance, cumulative/dynamic AUC, optional Brier scores, assumptions, and unsupported designs.
+
 Persist an approved baseline and monitor later batches without refitting:
 
 ```python
@@ -222,7 +246,9 @@ print(result.alert_state, result.exit_code)
 ```
 
 See [Repeatable batch monitoring](docs/monitoring.md) for fitted-constructor artifacts, fixed
-drift bins, matured outcomes, alert states, exit codes, and monthly result retention.
+drift bins, matured outcomes, PCA loading-drift checks, alert states, exit codes, and monthly
+result retention. See [PCA loading-drift monitoring](docs/pca-loading-drift.md) for sign-aligned
+loading comparisons, explained-variance changes, bootstrap uncertainty, and the no-refit contract.
 
 Attach governance and reproducibility metadata to audit and monitoring artifacts when a score needs
 business approval:

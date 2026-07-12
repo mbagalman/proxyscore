@@ -28,6 +28,7 @@ from ._utils import (
 from .config import Thresholds
 from .construct import CompositeScore, PCAScore
 from .governance import GovernanceContext, GovernanceManifest, create_governance_manifest
+from .pca_drift import assess_pca_loading_drift
 from .validation import downstream_validity
 
 ARTIFACT_FORMAT_VERSION = "1.0"
@@ -67,6 +68,14 @@ class MonitoringLimits:
     volume_failure_high: float = 10.00
     performance_warning_drop: float = 0.05
     performance_failure_drop: float = 0.10
+    pca_cosine_warning_below: float = 0.98
+    pca_cosine_failure_below: float = 0.95
+    pca_loading_delta_warning: float = 0.10
+    pca_loading_delta_failure: float = 0.20
+    pca_explained_variance_drop_warning: float = 0.05
+    pca_explained_variance_drop_failure: float = 0.10
+    pca_min_complete_rows: int = 100
+    pca_bootstrap_samples: int = 200
 
     def __post_init__(self) -> None:
         for name, value in asdict(self).items():
@@ -89,6 +98,30 @@ class MonitoringLimits:
             raise ValueError(
                 "performance_warning_drop cannot exceed performance_failure_drop"
             )
+        if not (
+            0
+            <= self.pca_cosine_failure_below
+            <= self.pca_cosine_warning_below
+            <= 1
+        ):
+            raise ValueError(
+                "require 0 <= pca_cosine_failure_below <= "
+                "pca_cosine_warning_below <= 1"
+            )
+        if self.pca_loading_delta_warning > self.pca_loading_delta_failure:
+            raise ValueError(
+                "pca_loading_delta_warning cannot exceed pca_loading_delta_failure"
+            )
+        if (
+            self.pca_explained_variance_drop_warning
+            > self.pca_explained_variance_drop_failure
+        ):
+            raise ValueError(
+                "pca_explained_variance_drop_warning cannot exceed "
+                "pca_explained_variance_drop_failure"
+            )
+        ensure_count(self.pca_min_complete_rows, 3, "pca_min_complete_rows")
+        ensure_count(self.pca_bootstrap_samples, 0, "pca_bootstrap_samples")
 
 
 @dataclass(frozen=True)
@@ -766,9 +799,9 @@ def monitor_batch(
             {"batch_rows": 0},
         )
 
+    constructor = baseline.constructor()
     try:
         if score is None:
-            constructor = baseline.constructor()
             if constructor is None:
                 return _schema_failure(
                     baseline,
@@ -947,6 +980,71 @@ def monitor_batch(
         )
     )
 
+    pca_metrics: dict[str, Any] = {}
+    if isinstance(constructor, PCAScore):
+        try:
+            pca_assessment = assess_pca_loading_drift(
+                constructor,
+                frame,
+                min_sample_size=limits.pca_min_complete_rows,
+                n_bootstrap=limits.pca_bootstrap_samples,
+                random_state=0,
+            )
+            explained_variance_drop = max(-pca_assessment.explained_variance_delta, 0.0)
+            if (
+                pca_assessment.cosine_similarity
+                < limits.pca_cosine_failure_below
+                or pca_assessment.max_abs_loading_delta
+                >= limits.pca_loading_delta_failure
+                or explained_variance_drop
+                >= limits.pca_explained_variance_drop_failure
+            ):
+                pca_status = MonitorStatus.FAILURE
+            elif (
+                pca_assessment.cosine_similarity
+                < limits.pca_cosine_warning_below
+                or pca_assessment.max_abs_loading_delta
+                >= limits.pca_loading_delta_warning
+                or explained_variance_drop
+                >= limits.pca_explained_variance_drop_warning
+            ):
+                pca_status = MonitorStatus.WARNING
+            else:
+                pca_status = MonitorStatus.INFORMATIONAL
+            pca_metrics = {
+                **pca_assessment.metrics(),
+                "explained_variance_drop": explained_variance_drop,
+                "cosine_warning_below": limits.pca_cosine_warning_below,
+                "cosine_failure_below": limits.pca_cosine_failure_below,
+                "loading_delta_warning": limits.pca_loading_delta_warning,
+                "loading_delta_failure": limits.pca_loading_delta_failure,
+                "explained_variance_drop_warning": (
+                    limits.pca_explained_variance_drop_warning
+                ),
+                "explained_variance_drop_failure": (
+                    limits.pca_explained_variance_drop_failure
+                ),
+            }
+            pca_summary = (
+                f"Sign-aligned PCA loading cosine is "
+                f"{pca_assessment.cosine_similarity:.3g}; maximum absolute loading "
+                f"delta {pca_assessment.max_abs_loading_delta:.3g}; explained-variance "
+                f"drop {explained_variance_drop:.3g}."
+            )
+            details["pca_loading_drift"] = pca_assessment.loadings
+        except (TypeError, ValueError, KeyError, np.linalg.LinAlgError) as exc:
+            pca_status = MonitorStatus.NOT_ASSESSABLE
+            pca_summary = f"PCA loading drift is not assessable: {exc}."
+            pca_metrics = {"reason": str(exc)}
+        checks.append(
+            MonitoringCheck(
+                "pca_loading_drift",
+                pca_status,
+                pca_summary,
+                pca_metrics,
+            )
+        )
+
     performance_metrics: dict[str, Any] = {}
     outcome_rows_for_manifest = 0
     if outcome is None:
@@ -1050,6 +1148,14 @@ def monitor_batch(
         "max_indicator_psi": float(indicator_table["psi"].max()),
         "max_missing_rate": float(missing_table["batch_missing_rate"].max()),
     }
+    if pca_metrics and "cosine_similarity" in pca_metrics:
+        metrics.update(
+            {
+                "pca_loading_cosine": pca_metrics["cosine_similarity"],
+                "pca_max_abs_loading_delta": pca_metrics["max_abs_loading_delta"],
+                "pca_explained_variance_drop": pca_metrics["explained_variance_drop"],
+            }
+        )
     governance_manifest = None
     if baseline.governance_manifest is not None:
         base_manifest = GovernanceManifest.from_dict(baseline.governance_manifest)

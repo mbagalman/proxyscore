@@ -57,6 +57,9 @@ Changelog = "https://github.com/mbagalman/proxyscore/blob/main/CHANGELOG.md"
 parquet = [
     "pyarrow>=14.0",
 ]
+survival = [
+    "scikit-survival>=0.22",
+]
 dev = [
     "pytest>=7.0",
     "ruff>=0.4",

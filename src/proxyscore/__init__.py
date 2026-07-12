@@ -83,6 +83,7 @@ from .multi_outcome import (
     compare_outcomes,
     validate_outcomes,
 )
+from .pca_drift import PCALoadingDriftAssessment, assess_pca_loading_drift
 from .recipes import (
     BusinessRecipe,
     RecipeResult,
@@ -94,6 +95,7 @@ from .recipes import (
 )
 from .results import CheckResult, Status
 from .stability import check_stability, psi, psi_over_time
+from .survival_validation import SurvivalValidationAssessment, assess_survival_validation
 from .validation import check_downstream, downstream_validity, lift_table
 
 __version__ = "0.1.0"
@@ -121,6 +123,7 @@ __all__ = [
     "LocalParquetAdapter",
     "MeasurementInvarianceAssessment",
     "PCAScore",
+    "PCALoadingDriftAssessment",
     "MonitorStatus",
     "MonitoringBaseline",
     "MonitoringCheck",
@@ -137,6 +140,7 @@ __all__ = [
     "RecipeResult",
     "ScoreComparison",
     "Status",
+    "SurvivalValidationAssessment",
     "TableProvenance",
     "TabularAdapter",
     "TabularData",
@@ -148,6 +152,8 @@ __all__ = [
     "assess_calibration",
     "assess_construct_validity",
     "assess_measurement_invariance",
+    "assess_pca_loading_drift",
+    "assess_survival_validation",
     "check_downstream",
     "check_indicators",
     "check_leakage",

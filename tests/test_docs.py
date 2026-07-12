@@ -31,6 +31,7 @@ PUBLIC_DOCS = [
     REPO / "docs" / "html-reports.md",
     REPO / "docs" / "score-comparison.md",
     REPO / "docs" / "monitoring.md",
+    REPO / "docs" / "pca-loading-drift.md",
     REPO / "docs" / "cli.md",
     REPO / "docs" / "calibration.md",
     REPO / "docs" / "governance.md",
@@ -38,6 +39,7 @@ PUBLIC_DOCS = [
     REPO / "docs" / "business-recipes.md",
     REPO / "docs" / "construct-validity.md",
     REPO / "docs" / "measurement-invariance.md",
+    REPO / "docs" / "survival-validation.md",
 ]
 IND = ["logins", "feature_depth", "support_tickets", "nps", "payment_delay_days"]
 

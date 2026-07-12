@@ -26,6 +26,9 @@ Project documentation for `proxyscore`.
   uncertainty, rankings, migrations, segments, stability, and action assignments.
 - **[Repeatable batch monitoring](monitoring.md)** - persist fixed baseline state and evaluate
   later batches with drift, missingness, volume, and matured-outcome checks.
+- **[PCA loading-drift monitoring](pca-loading-drift.md)** - compare later first-component
+  loadings with fixed approved PCA state using sign alignment, loading deltas, explained variance,
+  bootstrap uncertainty, and monitoring alerts.
 - **[Command-line interface](cli.md)** - run audit, comparison, baseline, and monitoring
   workflows from CSV or Parquet with versioned TOML configuration.
 - **[Probability calibration](calibration.md)** - map arbitrary scores to probabilities and
@@ -45,6 +48,9 @@ Project documentation for `proxyscore`.
 - **[Measurement invariance](measurement-invariance.md)** - test configural, metric, scalar, and
   strict invariance across segments with prerequisite gating, sparse-group safeguards, and a
   published lavaan reference benchmark.
+- **[Survival-style validation](survival-validation.md)** - evaluate right-censored time-to-event
+  outcomes with IPCW concordance, cumulative/dynamic AUC, optional horizon Brier scores, and an
+  explicit censoring reference sample.
 
 The top-level [`README.md`](../README.md) has the quick reference and the project's
 positioning; [`CHANGELOG.md`](../CHANGELOG.md) tracks releases.
