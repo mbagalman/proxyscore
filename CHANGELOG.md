@@ -37,6 +37,9 @@
 - Added business recipes and a tabular adapter protocol with customer-health, lead-quality, and
   account-risk preparation patterns, local CSV/Parquet adapters, provenance metadata,
   point-in-time SQL examples, deduplication, and data-minimization guidance.
+- Added exploratory multi-construct validity assessment with named one-factor loadings, AVE and
+  HTMT tables, row-bootstrap confidence intervals, shared complete-case safeguards, synthetic
+  reference tests, and guidance for escalating confirmatory work to SEM/CFA software.
 
 ## 0.1.0 (2026-06-10)
 

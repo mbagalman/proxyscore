@@ -40,6 +40,7 @@ from .calibration import (
 from .comparison import ComparisonCoverage, ScoreComparison, compare_scores
 from .config import Thresholds
 from .construct import CompositeScore, PCAScore
+from .construct_validity import ConstructValidityAssessment, assess_construct_validity
 from .governance import (
     GOVERNANCE_SCHEMA_VERSION,
     GovernanceContext,
@@ -106,6 +107,7 @@ __all__ = [
     "CalibrationModel",
     "CheckResult",
     "CompositeScore",
+    "ConstructValidityAssessment",
     "ComparisonCoverage",
     "GOVERNANCE_SCHEMA_VERSION",
     "GovernanceContext",
@@ -139,6 +141,7 @@ __all__ = [
     "align_delayed_outcomes",
     "analyze_actions",
     "assess_calibration",
+    "assess_construct_validity",
     "check_downstream",
     "check_indicators",
     "check_leakage",

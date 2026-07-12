@@ -158,6 +158,25 @@ See [Business recipes and data adapters](docs/business-recipes.md) for customer-
 lead-quality, and account-risk recipes, local CSV/Parquet adapters, point-in-time SQL,
 deduplication, provenance, and credential-handling guidance.
 
+Screen whether several reflective constructs converge internally while remaining distinct:
+
+```python
+from proxyscore import assess_construct_validity
+
+validity = assess_construct_validity(
+    survey,
+    {
+        "trust": ["reliable", "transparent", "keeps_promises"],
+        "value": ["worth_price", "useful", "good_investment"],
+    },
+)
+print(validity.ave)
+print(validity.htmt)
+```
+
+See [Multi-construct validity](docs/construct-validity.md) for AVE and HTMT definitions,
+bootstrap intervals, sample safeguards, interpretation, and when to use SEM/CFA instead.
+
 Persist an approved baseline and monitor later batches without refitting:
 
 ```python
@@ -322,7 +341,6 @@ tool does — see **[A practitioner's guide to proxy metrics](docs/proxy-metrics
 
 ## Roadmap
 
-- Convergent/discriminant validity for multi-construct setups (AVE, HTMT)
 - Measurement invariance testing across segments
 - Eigenvector/loading drift for PCA-based scores
 - Survival-style validation for right-censored time-to-event outcomes

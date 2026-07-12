@@ -46,6 +46,8 @@ Priorities reflect operational risk: **P0** closes gaps that commonly prevent re
 - Business recipes and a tabular adapter protocol with customer-health, lead-quality, and
   account-risk preparation patterns, local CSV/Parquet adapters, provenance metadata,
   point-in-time SQL examples, deduplication, and credential-handling guidance.
+- Exploratory multi-construct validity assessment with named one-factor loadings, AVE, HTMT,
+  bootstrap intervals, shared complete-case safeguards, and SEM/CFA escalation guidance.
 
 ## P0: required for operational use
 
@@ -332,11 +334,20 @@ handling.
 
 ## P2: statistical depth
 
-### BR-011: Multi-construct convergent and discriminant validity
+### BR-011: Multi-construct convergent and discriminant validity - Complete
+
+**Completed:** Implemented and documented in the Unreleased version. Focused synthetic-reference,
+sample-safeguard, documentation, Ruff, mypy, and full-suite checks pass locally.
 
 Implement average variance extracted (AVE) and heterotrait-monotrait ratio (HTMT) for named
 constructs, with bootstrap confidence intervals, sample safeguards, synthetic reference tests,
 and guidance on when to use a structural-equation-modeling package.
+
+**Completion notes:** Added `ConstructValidityAssessment` and `assess_construct_validity` with
+named reflective constructs, exploratory one-factor correlation/PCA loadings, per-construct AVE,
+pairwise HTMT, row-bootstrap percentile intervals, one shared complete-case sample, explicit
+threshold flags, sample and identifiability safeguards, report-ready tables/Markdown, analytically
+known synthetic reference tests, and a guide defining when SEM/CFA software is required.
 
 ### BR-012: Measurement invariance across segments
 

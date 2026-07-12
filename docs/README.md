@@ -39,6 +39,9 @@ Project documentation for `proxyscore`.
 - **[Business recipes and data adapters](business-recipes.md)** - prepare customer-health,
   lead-quality, and account-risk audit inputs with point-in-time SQL patterns, local CSV/Parquet
   adapters, deduplication, provenance, and credential-handling guidance.
+- **[Multi-construct validity](construct-validity.md)** - screen named reflective constructs with
+  exploratory AVE, HTMT, shared-sample safeguards, bootstrap intervals, and clear SEM/CFA
+  escalation guidance.
 
 The top-level [`README.md`](../README.md) has the quick reference and the project's
 positioning; [`CHANGELOG.md`](../CHANGELOG.md) tracks releases.
